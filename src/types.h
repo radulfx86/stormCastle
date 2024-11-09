@@ -33,7 +33,11 @@ struct std::hash<Vec2i>
     }
 };
 
-
+typedef struct Bounds
+{
+    Vec2 pos;
+    Vec2 size;
+} Bounds;
 
 typedef struct TexInfo
 {
@@ -61,6 +65,7 @@ public:
     Animation animation;
     virtual void update(float delta_s);
     virtual void draw();
+    virtual void setPosition(Vec2 pos);
 };
 
 class InstancedObject2D : public Object2D
@@ -77,17 +82,15 @@ public:
     void updateInstanceType(int instance, bool enabled, Vec2 texPos);
 };
 
-class Level
-{
-public:
-Level() {}
-    bool update(float delta_s) { (void) delta_s;}
-    bool draw(float delta_s) { (void) delta_s;}
-};
+typedef struct {
+    Vec2 speed;
+    Vec2 acc;
+} MotionParameters_t;
+
+class Level;
 
 typedef struct Scene2D
 {
-    std::vector<Object2D*> objects;
     bool running;
     #ifndef __EMSCRIPTEN__
     SDL_Window *window;
@@ -95,6 +98,7 @@ typedef struct Scene2D
     uint64_t last;
     Level *currentLevel;
 } Scene2D;
+
 
 typedef struct Action {
     

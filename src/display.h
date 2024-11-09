@@ -123,10 +123,6 @@ void initScene(Scene2D &scene)
 
 void cleanScene(Scene2D &scene)
 {
-    for ( auto *obj : scene.objects )
-    {
-        delete obj;
-    }
 }
 
 #endif // _DISPLAY_H_

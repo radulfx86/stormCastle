@@ -12,6 +12,68 @@
 
 EntityManager &s = EntityManager::getInstance();
 
+/*** ECS STUFF HERE */
+
+
+typedef bool (*AnimationUpdater)(Object2D *tgt, MotionParameters_t &params);
+
+class AnimationSystem : public System{
+public:
+    AnimationSystem() : System(EntityManager::getInstance().newSystem("animations"))
+    {
+        components.set(EntityManager::getInstance().getComponentID<MotionParameters_t>());
+        components.set(EntityManager::getInstance().getComponentID<Object2D *>());
+        components.set(EntityManager::getInstance().getComponentID<AnimationUpdater>());
+    }
+
+    virtual void update(float deltaTimeS) override
+    {
+        for ( EntityID eid : EntityManager::getInstance().getSystemEntities(id) )
+        {
+            AnimationUpdater updater = EntityManager::getInstance().getComponent<AnimationUpdater>(eid);
+            MotionParameters_t &params = EntityManager::getInstance().getComponent<MotionParameters_t>(eid);
+            Object2D *tgt = EntityManager::getInstance().getComponent<Object2D*>(eid);
+            updater(tgt, params);
+        }
+    }
+};
+#include <iostream>
+class Level
+{
+public:
+    Level()
+    {
+        //animations.init();
+        Components drawingComponents;
+        drawingComponents.set(s.getComponentID<Object2D *>());
+        // drawingComponents.set(s.getComponentID<Bounds>());
+        drawingSystem = s.addSystem(drawingComponents, "drawing");
+    }
+    bool update(float delta_s) { animations.update(delta_s); }
+    bool draw(float delta_s)
+    {
+        int c = 0;
+        for (auto entity : s.getSystemEntities(drawingSystem))
+        {
+            Bounds &b = s.getComponent<Bounds>(entity);
+            Object2D t;
+            s.getComponent<Object2D *>(entity)->setPosition(s.getComponent<Bounds>(entity).pos);
+            s.getComponent<Object2D *>(entity)->update(delta_s);
+            s.getComponent<Object2D *>(entity)->draw();
+            // s.getComponent<Tile *>(entity)->printPointers();
+            ++c;
+        }
+        //std::cerr << "elements drawn: " << c << "\n";
+        printf("elements drawn: %d\n", c);
+        return true;
+    }
+
+private:
+    AnimationSystem animations;
+    SystemID drawingSystem;
+};
+
+/**** NO MORE ECS STUFF HERE */
 void printObjectInfo(Object2D &obj)
 {
     printf("Object2D(vao: %d vertexBuffer: %d, program: %d)\n",
@@ -33,6 +95,18 @@ void Object2D::draw()
 
     glBindVertexArray(0);
 
+    glUseProgram(0);
+}
+
+void Object2D::setPosition(Vec2 pos)
+{
+    printf("move to %2.2f %2.2f\n", pos.x, pos.y);
+    float idMat[] = {1,0,0,0,
+                    0,1,0,0,
+                    0,0,1,0,
+                    pos.x,pos.y,0,1};
+    glUseProgram(program);
+    glUniformMatrix4fv(glGetUniformLocation(program, "model"), 1, GL_FALSE, idMat);
     glUseProgram(0);
 }
 
@@ -291,25 +365,22 @@ void mainloop(void *userData)
         scene->last = now;
     }
     float delta = (now - scene->last) / 1000.0;
+    scene->currentLevel->draw(delta);
 
-    for ( auto *obj : scene->objects )
-    {
-        /*
-        if ( typeid(*obj) == typeid(InstancedObject2D) )
-        {
-            InstancedObject2D *iobj = (InstancedObject2D*) obj;
-            iobj->updateInstance(0, true, Vec2{0,1},Vec2{0,0}, Vec2{1,1});
-        }
-        */
-        obj->update(delta);
-        obj->draw();
-    }
     scene->last = now;
     //printf("tick\n");
 }
 
+
+EntityID player;
+
 void move(const Vec2i &dir)
 {
+    Bounds &b = s.getComponent<Bounds>(player);
+    b.pos.x = dir.x;
+    b.pos.y = dir.y;
+
+/*
     if ( scene.objects.size() > 0 )
     {
         Object2D *obj = scene.objects[0];
@@ -319,9 +390,9 @@ void move(const Vec2i &dir)
         glUseProgram(0);
         printf("move! position at %d\n", posUniform);
     }
+    */
     printf("move\n");
 }
-
 int main()
 {
     printf("main\n");
@@ -340,18 +411,23 @@ int main()
     createObject(*obj, program);
     obj->tex = loadTexture("assets/images/characters.png",0);
 
-    EntityID player = s.newEntity("player");
+    player = s.newEntity("player");
     s.addComponent<Object2D*>(player, obj);
+    Bounds bounds;
+    bounds.pos = Vec2{1,1};
+    s.addComponent<Bounds>(player, bounds);
 
     InstancedObject2D *iobj = new InstancedObject2D;
     GLuint instancedProgram = createShader(loadText("shaders/simple.instanced.vs").c_str(), loadText("shaders/simple.instanced.fs").c_str());
     createInstancedObject(*iobj, instancedProgram);
     iobj->tex = obj->tex; // loadTexture("images/level.png",0);
-    scene.objects.push_back(iobj);
-    scene.objects.push_back(obj);
 
+    EntityID background = s.newEntity("background");
+    //s.addComponent<Object2D*>(background,iobj);
 
-    printf("scene contained %lu objects\n", scene.objects.size());
+    scene.currentLevel = new Level();
+
+    s.showAll();
 
     startMainLoop(scene);
 
