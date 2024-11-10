@@ -10,6 +10,7 @@
 #include "characters.h"
 #include "ecs.h"
 #include "systems.h"
+#include "controller.h"
 
 EntityManager &s = EntityManager::getInstance();
 
@@ -63,31 +64,6 @@ void printObjectInfo(Object2D &obj)
 }
 
 
-GLuint loadTexture(const char *path, GLuint offset)
-{
-    GLuint tex;
-    glGenTextures(1, &tex);
-    glBindTexture(GL_TEXTURE_2D, tex);
-
-#ifdef __EMSCRIPTEN__
-    int w, h;
-    char *data = emscripten_get_preloaded_image_data(path, &w, &h);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
-    printf("loaded image of size %d x %d\n", w, h);
-    free(data);
-#else
-    SDL_Surface *surface = IMG_Load(path);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, surface->w, surface->h, 0, GL_RGBA, GL_UNSIGNED_BYTE, surface->pixels);
-    SDL_FreeSurface(surface);
-
-#endif
-
-    glTexParameteri(GL_TEXTURE_2D , GL_TEXTURE_MIN_FILTER , GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D , GL_TEXTURE_MAG_FILTER , GL_NEAREST);
-
-
-    return tex;
-}
 
 void createObject(Object2D &obj, GLuint program, float tileSize = 1.0, Vec2 spriteSize = {1,1}, Vec2i spritePos = {0,0})
 {
@@ -181,6 +157,7 @@ void mainloop(void *userData)
         scene->last = now;
     }
     float delta = (now - scene->last) / 1000.0;
+    scene->controller->update(delta);
     scene->currentLevel->draw(delta);
 
     scene->last = now;
@@ -220,6 +197,8 @@ int main()
     Bounds bounds;
     bounds.pos = Vec2{1,1};
     s.addComponent<Bounds>(player, bounds);
+
+    scene.controller = new Controller(player);
 
     InstancedObject2D *iobj = new InstancedObject2D;
     GLuint instancedProgram = createShader(loadText("shaders/simple.instanced.vs").c_str(), loadText("shaders/simple.instanced.fs").c_str());

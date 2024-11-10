@@ -90,6 +90,8 @@ typedef struct {
 
 class Level;
 
+class Controller;
+
 typedef struct Scene2D
 {
     bool running;
@@ -98,11 +100,15 @@ typedef struct Scene2D
     #endif
     uint64_t last;
     Level *currentLevel;
+    Controller *controller;
 } Scene2D;
 
 
 typedef struct Action {
-    
+   enum { IDLE = 0, MOTION, ATTACK, TALK, SPECIAL, NUM_ACTIONS} TYPE;
+   Vec2i v2iParam;
+   Vec2 v2fParam;
+   bool bParam;
 } Action;
 
 

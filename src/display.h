@@ -2,6 +2,7 @@
 #define _DISPLAY_H_
 #include "gl_headers.h"
 #include "types.h"
+#include "controller.h"
 
 void mainloop(void *userData);
 
@@ -75,16 +76,16 @@ void handleInput(Scene2D &scene)
                 scene.running = false;
                 break;
             case SDLK_RIGHT:
-                move(Vec2i{1,0});
+                scene.controller->addAction(Action{Action::MOTION, Vec2i{1,0}, {0}, false});
                 break;
             case SDLK_LEFT:
-                move(Vec2i{-1,0});
+                scene.controller->addAction(Action{Action::MOTION, Vec2i{-1,0}, {0}, false});
                 break;
             case SDLK_UP:
-                move(Vec2i{0,-1});
+                scene.controller->addAction(Action{Action::MOTION, Vec2i{0,-1}, {0}, false});
                 break;
             case SDLK_DOWN:
-                move(Vec2i{0,1});
+                scene.controller->addAction(Action{Action::MOTION, Vec2i{0,1}, {0}, false});
                 break;
             default:
                 break;
@@ -104,6 +105,7 @@ void startMainLoop(Scene2D &scene)
 }
 void initScene(Scene2D &scene)
 {
+
     scene.running = false;
     SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO);
 
