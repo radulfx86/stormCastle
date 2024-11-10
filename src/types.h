@@ -2,6 +2,7 @@
 #define _TYPES_H_
 #include "gl_headers.h"
 #include <unordered_map>
+#include <vector>
 
 
 typedef struct Vec2
@@ -63,7 +64,7 @@ public:
     GLuint tex;
     GLuint program;
     Animation animation;
-    virtual void update(float delta_s);
+    virtual void updateAnimation(float delta_s);
     virtual void draw();
     virtual void setPosition(Vec2 pos);
 };
@@ -77,7 +78,7 @@ public:
     std::vector<Animation> animations;
     std::unordered_map<Vec2i, int> instancePositions;
     virtual void draw() override;
-    virtual void update(float delta_s) override;
+    virtual void updateAnimation(float delta_s) override;
     void updateInstance(int instance, bool enabled, Vec2 pos, Vec2 texPos, Vec2 texSize);
     void updateInstanceType(int instance, bool enabled, Vec2 texPos);
 };

@@ -9,7 +9,7 @@ void main() {
     color = texture(tex, outTexPos);
     if ( color.a < 1.0 )
     {
-        color = vec4(1,0,0,1);
-//        discard;
+       // color = vec4(1,0,0,1);
+        discard;
     }
 }
