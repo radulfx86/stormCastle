@@ -92,6 +92,7 @@ void createObject(Object2D &obj, GLuint program, float tileSize = 1.0, Vec2 spri
     printf("created object: ");
     printObjectInfo(obj);
 
+    obj.texOffset = 0;
 
     float idMat[] = {1,0,0,0,
                     0,1,0,0,
@@ -121,6 +122,32 @@ void createObject(Object2D &obj, GLuint program, float tileSize = 1.0, Vec2 spri
 }
 
 
+void createInstanceBackground(InstancedObject2D &obj, GLuint program)
+{
+    createObject(obj, program);
+    obj.texOffset = 1;
+    glUseProgram(obj.program);
+    glUniform1i(glGetUniformLocation(obj.program, "tex"), 0);
+    glUseProgram(0);
+    obj.size = Vec2{1,1};
+    obj.pos = Vec2{0,0};
+    int i = 0;
+    float w = 0.25;
+    float h = 0.25;
+    for ( int x = -2; x < 2; ++x )
+    {
+        for ( int y = -2; y < 2; ++y )
+        {
+            obj.updateInstance(i++, true, Vec2{(float)x,(float)y}, Vec2{x,y}, Vec2{0.25,0.25});
+            Animation anim;
+            anim.frames.clear();// = {{{0,0}, {w,h}, false, {0,0}}};
+            anim.currentFrame = 0;
+            obj.instancePositions[Vec2i{x,y}] = i;
+            //obj.animations.push_back(anim);
+        }
+    }
+    obj.numInstances = i;
+}
 
 void createInstancedObject(InstancedObject2D &obj, GLuint program)
 {
@@ -202,8 +229,12 @@ int main()
 
     InstancedObject2D *iobj = new InstancedObject2D;
     GLuint instancedProgram = createShader(loadText("shaders/simple.instanced.vs").c_str(), loadText("shaders/simple.instanced.fs").c_str());
-    createInstancedObject(*iobj, instancedProgram);
-    iobj->tex = obj->tex; // loadTexture("images/level.png",0);
+    //createInstancedObject(*iobj, instancedProgram);
+    createInstanceBackground(*iobj, instancedProgram);
+    iobj->tex = loadTexture("assets/images/tiles.png",0);
+
+
+    printf("player tex: %d level tex: %d\n", obj->tex, iobj->tex);
 
     EntityID background = s.newEntity("background");
     s.addComponent<Object2D*>(background,iobj);

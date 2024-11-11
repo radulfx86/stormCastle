@@ -63,6 +63,7 @@ public:
     GLuint vertexBuffer;
     GLuint tex;
     GLuint program;
+    GLuint texOffset;
     Animation animation;
     virtual void updateAnimation(float delta_s);
     virtual void draw();

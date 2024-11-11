@@ -6,7 +6,8 @@ void Object2D::draw()
     //printObjectInfo(obj);
     glUseProgram(this->program);
 
-    glActiveTexture(GL_TEXTURE0);
+    glActiveTexture(GL_TEXTURE0);// + texOffset);
+    printf("binding texture %d\n", this->tex);
     glBindTexture(GL_TEXTURE_2D, this->tex);
 
     glBindVertexArray(this->vao);
@@ -158,6 +159,9 @@ void InstancedObject2D::updateInstance(int instance, bool enabled, Vec2 pos, Vec
 void InstancedObject2D::draw()
 {
     glUseProgram(this->program);
+    glActiveTexture(GL_TEXTURE0);// + texOffset);
+    printf("binding texture %d\n", this->tex);
+    glBindTexture(GL_TEXTURE_2D, this->tex);
 
     glBindVertexArray(this->vao);
 
