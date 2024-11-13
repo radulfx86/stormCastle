@@ -9,5 +9,6 @@
     src/object.cpp \
     --preload-file shaders \
     --preload-file assets/images/characters.png \
+    --preload-file assets/images/tiles.png \
     --use-preload-plugins \
     -v

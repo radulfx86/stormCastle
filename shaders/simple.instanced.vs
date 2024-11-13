@@ -10,7 +10,7 @@ struct InstanceInfo {
     bool enabled;
     vec2 texOrigin;
 };
-#define MAX_ELEMENTS (100u)
+#define MAX_ELEMENTS (150u)
 
 uniform InstanceInfo texInfo[MAX_ELEMENTS];
 uniform mat4 model;

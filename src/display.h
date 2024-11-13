@@ -22,6 +22,32 @@ EM_BOOL touch_callback(int eventType, const EmscriptenTouchEvent *e, void *userD
     return 0;
 }
 
+EM_BOOL keydown_callback(int eventType, const EmscriptenKeyboardEvent *keyEvent, void *userData)
+{
+    Scene2D *scene = (Scene2D *)userData;
+    switch (keyEvent->keyCode)
+    {
+    case 0x1B:
+        scene->running = false;
+        break;
+    case 0x27:
+        scene->controller->addAction(Action{Action::MOTION, Vec2i{1, 0}, {0}, false});
+        break;
+    case 0x25:
+        scene->controller->addAction(Action{Action::MOTION, Vec2i{-1, 0}, {0}, false});
+        break;
+    case 0x26:
+        scene->controller->addAction(Action{Action::MOTION, Vec2i{0, 1}, {0}, false});
+        break;
+    case 0x28:
+        scene->controller->addAction(Action{Action::MOTION, Vec2i{0, -1}, {0}, false});
+        break;
+    default:
+        break;
+    }
+    return 0;
+}
+
 void initScene(Scene2D &scene)
 {
     EmscriptenWebGLContextAttributes attrs;
@@ -47,6 +73,7 @@ void initScene(Scene2D &scene)
 
     emscripten_set_click_callback("#canvas", 0, 1, mouse_callback);
     emscripten_set_touchend_callback("#canvas", 0, 1, touch_callback);
+    emscripten_set_keydown_callback("#canvas", &scene, 1, keydown_callback);
 }
 
 void startMainLoop(Scene2D &scene)
@@ -82,10 +109,10 @@ void handleInput(Scene2D &scene)
                 scene.controller->addAction(Action{Action::MOTION, Vec2i{-1,0}, {0}, false});
                 break;
             case SDLK_UP:
-                scene.controller->addAction(Action{Action::MOTION, Vec2i{0,-1}, {0}, false});
+                scene.controller->addAction(Action{Action::MOTION, Vec2i{0,1}, {0}, false});
                 break;
             case SDLK_DOWN:
-                scene.controller->addAction(Action{Action::MOTION, Vec2i{0,1}, {0}, false});
+                scene.controller->addAction(Action{Action::MOTION, Vec2i{0,-1}, {0}, false});
                 break;
             default:
                 break;

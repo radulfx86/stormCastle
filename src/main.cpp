@@ -134,17 +134,21 @@ void createInstanceBackground(InstancedObject2D &obj, GLuint program)
     int i = 0;
     float w = 0.25;
     float h = 0.25;
-    for ( int x = -2; x < 2; ++x )
+    for ( int x = -5; x < 5; ++x )
     {
-        for ( int y = -2; y < 2; ++y )
+        for ( int y = -7; y < 7; ++y )
         {
-            obj.updateInstance(i++, true, Vec2{(float)x,(float)y}, Vec2{x,y}, Vec2{0.25,0.25});
+            obj.updateInstance(i++, true, Vec2{(float)x,(float)y}, Vec2{(float)x,(float)y}, Vec2{0.25,0.25});
             Animation anim;
             anim.frames.clear();// = {{{0,0}, {w,h}, false, {0,0}}};
             anim.currentFrame = 0;
             obj.instancePositions[Vec2i{x,y}] = i;
             //obj.animations.push_back(anim);
+            if ( i >= 100 )
+                break;
         }
+            if ( i >= 100 )
+                break;
     }
     obj.numInstances = i;
 }
