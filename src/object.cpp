@@ -129,6 +129,29 @@ void InstancedObject2D::updateInstanceType(int instance, bool enabled, Vec2 texP
     glUseProgram(0);
 }
 
+void InstancedObject2D::updateInstanceTypePos(int instance, bool enabled, Vec2 pos, Vec2 texPos)
+{
+    glUseProgram(this->program);
+    char uniformName[50];
+    sprintf(uniformName,"texInfo[%i].enabled", instance);
+    GLuint enabledUniform = glGetUniformLocation(this->program, uniformName);
+    glUniform1i(enabledUniform, enabled);
+    if ( not enabled )
+    {
+        return;
+    }
+    sprintf(uniformName,"texInfo[%i].pos", instance);
+    GLuint posUniform = glGetUniformLocation(this->program, uniformName);
+    float vpos[2] = {this->pos.x + pos.x * this->size.x, this->pos.y + pos.y * this->size.y};
+    //float vpos[2] = {pos.x, pos.y};
+    glUniform2fv(posUniform, 1, vpos);
+    sprintf(uniformName,"texInfo[%i].texPos", instance);
+    GLuint texPosUniform = glGetUniformLocation(this->program, uniformName);
+    float tpos[2] = {texPos.x, texPos.y};
+    glUniform2fv(texPosUniform, 1, tpos);
+    glUseProgram(0);
+}
+
 void InstancedObject2D::updateInstance(int instance, bool enabled, Vec2 pos, Vec2 texPos, Vec2 texSize)
 {
     glUseProgram(this->program);

@@ -19,31 +19,243 @@ EntityManager &s = EntityManager::getInstance();
 
 
 #include <iostream>
+
+class LevelData
+{
+public:
+    enum LevelTileType
+    {
+        WALL,
+        DOOR,
+        NUM_LEVEL_TILE_TYPES
+    };
+    struct LevelTile
+    {
+        LevelTileType type;
+        int orientation;
+    };
+    int getTileIndex(Vec2i pos)
+    {
+        if ( data.find(pos) == data.end() )
+        {
+            return -1;
+        }
+        return data[pos].orientation;
+    }
+
+    LevelData() {}
+
+    static LevelData load(std::string path, Vec2i offset)
+    {
+        LevelData level;
+        int w = 0;
+        int h = 0;
+        try
+        {
+            std::ifstream istr(path, std::ios_base::in);
+            int y = 0;
+            for( std::string line; std::getline(istr, line); ++y)
+            {
+                printf("y: %2d ", y);
+                for ( int x = 0; x < line.length(); ++x )
+                {
+                    printf(">(%d,%d)<", x+offset.x,y+offset.y);
+                    if ( x > w )
+                    {
+                        w = x;
+                    }
+                    switch (line[x])
+                    {
+                        case 'W' :
+                            level.data[Vec2i{x+offset.x,y+offset.y}] = {WALL,0};
+                            break;
+                        case 'D' :
+                            level.data[Vec2i{x+offset.x,y+offset.y}] = {DOOR,0};
+                            break;
+                        default:
+                            break;
+                    }
+                }
+                printf("\n");
+                if ( y > h )
+                {
+                    h = y;
+                }
+            }
+        }
+        catch(const std::exception& e)
+        {
+            std::cerr << e.what() << '\n';
+        }
+
+	// index in tile-set to be used
+	// indices correspond to the sum of neighbor positions
+	//  1		1/2		2  
+	//  1/2		x		2/8
+	//   4		4/8     8
+        for ( std::pair<const Vec2i, LevelTile> &tile : level.data )
+        {
+            int x = tile.first.x;
+            int y = tile.first.y;
+            int cnt = 0;
+            cnt += (level.data.find(Vec2i{x, y - 1}) != level.data.end())
+                    && (level.data.find(Vec2i{x - 1, y - 1}) != level.data.end())
+                    && (level.data.find(Vec2i{x - 1, y}) != level.data.end())
+                 ? 4 : 0;
+            cnt += (level.data.find(Vec2i{x, y - 1}) != level.data.end())
+                    && (level.data.find(Vec2i{x + 1, y - 1}) != level.data.end())
+                    && (level.data.find(Vec2i{x + 1, y}) != level.data.end())
+                 ? 8 : 0;
+            cnt += (level.data.find(Vec2i{x, y + 1}) != level.data.end())
+                    && (level.data.find(Vec2i{x - 1, y + 1}) != level.data.end())
+                    && (level.data.find(Vec2i{x - 1, y}) != level.data.end())
+                 ? 1 : 0;
+            cnt += (level.data.find(Vec2i{x, y + 1}) != level.data.end())
+                    && (level.data.find(Vec2i{x + 1, y + 1}) != level.data.end())
+                    && (level.data.find(Vec2i{x + 1, y}) != level.data.end())
+                 ? 2 : 0;
+            tile.second.orientation = cnt;
+            printf("LEVEL %2d %2d -> %d\n", x, y, cnt);
+        }
+        printf("LEVEL size: %d\n", level.data.size());
+        
+        return level;
+    }
+    bool intersects(const Bounds &b)
+    {
+        return data.find(Vec2i{(int)b.pos.x, (int)b.pos.y}) != data.end()
+                || data.find(Vec2i{(int)(b.pos.x + b.size.x), (int)b.pos.y}) != data.end()
+                || data.find(Vec2i{(int)(b.pos.x + b.size.x), (int)(b.pos.y + b.size.y)}) != data.end()
+                || data.find(Vec2i{(int)b.pos.x, (int)(b.pos.y + b.size.y)}) != data.end();
+    }
+    std::vector<std::pair<Vec2i, LevelTile>> getTilesInBounds(const Bounds &b)
+    {
+        std::vector<std::pair<Vec2i, LevelTile>> tiles;
+        Vec2i min = {(int)b.pos.x, (int)b.pos.y};
+        Vec2i max = {(int)std::ceil(b.pos.x + b.size.x), (int)(std::ceil(b.pos.y + b.size.y))};
+        for ( auto tile : data )
+        {
+            tiles.push_back(tile);
+        }
+        return tiles;
+        for ( int x = min.x; x < max.x ; ++x )
+        {
+            for ( int y = min.y; y < max.y; ++y )
+            {
+                Vec2i tmp{x,y};
+                if ( data.find(tmp) != data.end() )
+                {
+                    tiles.push_back(std::pair<Vec2i, LevelTile>(tmp, data[tmp]));
+                }
+            }
+        }
+        return tiles;
+    }
+private:
+    std::map<Vec2i, LevelTile> data;
+};
+
 class Level
 {
 public:
-    Level()
+    Level(LevelData data, EntityID background) : data(data), background(background), numTiles(100)
     {
         //animations.init();
         Components drawingComponents;
         drawingComponents.set(s.getComponentID<Object2D *>());
         // drawingComponents.set(s.getComponentID<Bounds>());
         drawingSystem = s.addSystem(drawingComponents, "drawing");
+
+        Components collisionComponents;
+        collisionComponents.set(s.getComponentID<Object2D *>());
+        collisionComponents.set(s.getComponentID<Bounds>());
+        collisionDetection = s.addSystem(collisionComponents, "collision");
     }
-    bool update(float delta_s) { animations.update(delta_s); }
+    bool update(float delta_s)
+    {
+        /* level background */
+        /* TODO:
+        - get view-cone (optional)
+        - for each tile (visible) in the level:
+            - set background-tile-instance - pos & type (texture offset)
+        */
+        InstancedObject2D *bgObj = (InstancedObject2D*)s.getComponent<Object2D*>(background);
+        Bounds cameraBounds{Vec2{-5,-5}, Vec2{10,10}};
+        std::vector<std::pair<Vec2i, LevelData::LevelTile>> tiles = data.getTilesInBounds(cameraBounds);
+
+        int idxTile = 0;
+        for ( auto tile : tiles )
+        {
+            Vec2 texSize{
+                        (float)fmod(tile.second.orientation, 4.0),
+                        (int)(tile.second.orientation / 4.0)
+                        
+                        };
+            //texSize.x = 0;
+            //texSize.y = 0;
+            printf("drawing tile %d at %d %d with tile %d of size %f %f\n",
+                idxTile, tile.first.x, tile.first.y, tile.second.orientation,
+                texSize.x, texSize.y
+                );
+            bgObj->updateInstanceTypePos(idxTile++, true,
+                    Vec2{(float)tile.first.x, (float)tile.first.y},
+                    texSize);
+        }
+        int newNumTiles = idxTile;
+        // disable old tiles
+        for ( ; idxTile < numTiles; ++idxTile )
+        {
+            bgObj->updateInstance(idxTile, false, Vec2{0,0}, Vec2{0,0}, Vec2{0,0});
+        }
+        printf("had %d tiles, now %d\n", numTiles, newNumTiles);
+        numTiles = newNumTiles;
+
+        /* collision */
+        /// NOTE: somehow player entity is deleted ...
+        for ( auto entity : s.getSystemEntities(collisionDetection) )
+        {
+            Bounds &bounds = s.getComponent<Bounds>(entity);
+            MotionParameters_t &motion = s.getComponent<MotionParameters_t>(entity);
+            Bounds tmpNextBounds = {
+                Vec2{
+                    bounds.pos.x + motion.speed.x * delta_s,
+                    bounds.pos.y + motion.speed.y * delta_s },
+                bounds.size
+            };
+            if ( data.intersects(tmpNextBounds) )
+            {
+                motion.speed.x = 0.f;
+                motion.speed.y = 0.f;
+                printf("entity %d collided with level - not moving!\n", entity);
+            }
+            bounds.pos.x += motion.speed.x * delta_s;
+            bounds.pos.y += motion.speed.y * delta_s;
+        }
+
+        /* animations */
+        animations.update(delta_s);
+        return true;
+    }
     bool draw(float delta_s)
     {
         int c = 0;
         for (auto entity : s.getSystemEntities(drawingSystem))
         {
             Bounds &b = s.getComponent<Bounds>(entity);
-            Object2D t;
+            Object2D *t = s.getComponent<Object2D *>(entity);
             printf("draw entity %d\n", entity);
-            s.getComponent<Object2D *>(entity)->setPosition(s.getComponent<Bounds>(entity).pos);
-            //s.getComponent<Object2D *>(entity)->update(delta_s);
-            s.getComponent<Object2D *>(entity)->updateAnimation(delta_s);
-            s.getComponent<Object2D *>(entity)->draw();
-            // s.getComponent<Tile *>(entity)->printPointers();
+            if ( t )
+            {
+                t->setPosition(b.pos);
+                // s.getComponent<Object2D *>(entity)->update(delta_s);
+                t->updateAnimation(delta_s);
+                t->draw();
+                // s.getComponent<Tile *>(entity)->printPointers();
+            }
+            else
+            {
+                printf("UNKOWN OBJECT FOR ENTITY %d\n", entity);
+            }
             ++c;
         }
         //std::cerr << "elements drawn: " << c << "\n";
@@ -53,7 +265,11 @@ public:
 
 private:
     AnimationSystem animations;
+    SystemID collisionDetection;
     SystemID drawingSystem;
+    LevelData data;
+    EntityID background;
+    int numTiles;
 };
 
 /**** NO MORE ECS STUFF HERE */
@@ -138,11 +354,11 @@ void createInstanceBackground(InstancedObject2D &obj, GLuint program)
     {
         for ( int y = -7; y < 7; ++y )
         {
-            obj.updateInstance(i++, true, Vec2{(float)x,(float)y}, Vec2{(float)x,(float)y}, Vec2{0.25,0.25});
+            obj.updateInstance(i++, true, Vec2{(float)x,(float)y}, Vec2{(float)x,(float)y}, Vec2{w, h});
             Animation anim;
             anim.frames.clear();// = {{{0,0}, {w,h}, false, {0,0}}};
             anim.currentFrame = 0;
-            obj.instancePositions[Vec2i{x,y}] = i;
+            //obj.instancePositions[Vec2i{x,y}] = i;
             //obj.animations.push_back(anim);
             if ( i >= 100 )
                 break;
@@ -189,6 +405,7 @@ void mainloop(void *userData)
     }
     float delta = (now - scene->last) / 1000.0;
     scene->controller->update(delta);
+    scene->currentLevel->update(delta);
     scene->currentLevel->draw(delta);
 
     scene->last = now;
@@ -205,6 +422,7 @@ void move(const Vec2i &dir)
     b.pos.y += dir.y/10.0;
     printf("move\n");
 }
+
 int main()
 {
     printf("main\n");
@@ -246,7 +464,7 @@ int main()
     bgbounds.pos = Vec2{1,1};
     s.addComponent<Bounds>(background, bgbounds);
 
-    scene.currentLevel = new Level();
+    scene.currentLevel = new Level(LevelData::load("level.txt", Vec2i{-5,-5}), background);
 
     s.showAll();
 

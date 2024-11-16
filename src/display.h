@@ -27,20 +27,23 @@ EM_BOOL keydown_callback(int eventType, const EmscriptenKeyboardEvent *keyEvent,
     Scene2D *scene = (Scene2D *)userData;
     switch (keyEvent->keyCode)
     {
-    case 0x1B:
+    case 0x1B:  // escape
         scene->running = false;
         break;
-    case 0x27:
+    case 0x27:  // right arrow
         scene->controller->addAction(Action{Action::MOTION, Vec2i{1, 0}, {0}, false});
         break;
-    case 0x25:
+    case 0x25:  // left arrow
         scene->controller->addAction(Action{Action::MOTION, Vec2i{-1, 0}, {0}, false});
         break;
-    case 0x26:
+    case 0x26:  // up arrow
         scene->controller->addAction(Action{Action::MOTION, Vec2i{0, 1}, {0}, false});
         break;
-    case 0x28:
+    case 0x28:  // down arrow
         scene->controller->addAction(Action{Action::MOTION, Vec2i{0, -1}, {0}, false});
+        break;
+    case 0x20:  // space
+        scene->controller->addAction(Action{Action::INTERACT, {0}, {0}, false});
         break;
     default:
         break;
@@ -113,6 +116,9 @@ void handleInput(Scene2D &scene)
                 break;
             case SDLK_DOWN:
                 scene.controller->addAction(Action{Action::MOTION, Vec2i{0,-1}, {0}, false});
+                break;
+            case SDLK_SPACE:
+                scene.controller->addAction(Action{Action::INTERACT, {0}, {0}, false});
                 break;
             default:
                 break;

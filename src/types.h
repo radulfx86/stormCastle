@@ -14,6 +14,8 @@ typedef float Mat4[16];
 
 typedef float Mat2[4];
 
+#define MAX_WIDTH 100
+
 typedef struct Vec2i
 {
     int x, y;
@@ -21,9 +23,13 @@ typedef struct Vec2i
     {
         return a.x == b.x && a.y == b.y;
     }
+    friend bool operator<(const Vec2i &a, const Vec2i &b)
+    {
+        return (a.x * MAX_WIDTH + a.y) < (b.x * MAX_WIDTH + b.y);
+        //return a.x * a.x + a.y * a.y < b.x * b.x + b.y * b.y;
+    }
 } Vec2i;
 
-#define MAX_WIDTH 100
 
 template<>
 struct std::hash<Vec2i>
@@ -77,11 +83,13 @@ public:
     Vec2 pos;
     Vec2 size;
     std::vector<Animation> animations;
+    /// @note might not be needed
     std::unordered_map<Vec2i, int> instancePositions;
     virtual void draw() override;
     virtual void updateAnimation(float delta_s) override;
     void updateInstance(int instance, bool enabled, Vec2 pos, Vec2 texPos, Vec2 texSize);
     void updateInstanceType(int instance, bool enabled, Vec2 texPos);
+    void updateInstanceTypePos(int instance, bool enabled, Vec2 pos, Vec2 texPos);
 };
 
 typedef struct {
@@ -106,7 +114,7 @@ typedef struct Scene2D
 
 
 typedef struct Action {
-   enum { IDLE = 0, MOTION, ATTACK, TALK, SPECIAL, NUM_ACTIONS} TYPE;
+   enum { IDLE = 0, MOTION, INTERACT, ATTACK, TALK, SPECIAL, NUM_ACTIONS} TYPE;
    Vec2i v2iParam;
    Vec2 v2fParam;
    bool bParam;
