@@ -110,6 +110,7 @@ typedef struct Scene2D
     uint64_t last;
     Level *currentLevel;
     Controller *controller;
+    uint64_t tick;
 } Scene2D;
 
 

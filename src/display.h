@@ -98,7 +98,7 @@ void handleInput(Scene2D &scene)
     SDL_Event event;
     while (SDL_PollEvent(&event))
     {
-        if (event.type == SDL_KEYDOWN)
+        if (event.type == SDL_KEYDOWN || event.type == SDL_KEYUP)
         {
             switch (event.key.keysym.sym)
             {
@@ -106,19 +106,19 @@ void handleInput(Scene2D &scene)
                 scene.running = false;
                 break;
             case SDLK_RIGHT:
-                scene.controller->addAction(Action{Action::MOTION, Vec2i{1,0}, {0}, false});
+                scene.controller->addAction(Action{Action::MOTION, Vec2i{1,0}, {0}, event.type == SDL_KEYDOWN});
                 break;
             case SDLK_LEFT:
-                scene.controller->addAction(Action{Action::MOTION, Vec2i{-1,0}, {0}, false});
+                scene.controller->addAction(Action{Action::MOTION, Vec2i{-1,0}, {0}, event.type == SDL_KEYDOWN});
                 break;
             case SDLK_UP:
-                scene.controller->addAction(Action{Action::MOTION, Vec2i{0,1}, {0}, false});
+                scene.controller->addAction(Action{Action::MOTION, Vec2i{0,1}, {0}, event.type == SDL_KEYDOWN});
                 break;
             case SDLK_DOWN:
-                scene.controller->addAction(Action{Action::MOTION, Vec2i{0,-1}, {0}, false});
+                scene.controller->addAction(Action{Action::MOTION, Vec2i{0,-1}, {0}, event.type == SDL_KEYDOWN});
                 break;
             case SDLK_SPACE:
-                scene.controller->addAction(Action{Action::INTERACT, {0}, {0}, false});
+                scene.controller->addAction(Action{Action::INTERACT, {0}, {0}, event.type == SDL_KEYDOWN});
                 break;
             default:
                 break;
@@ -133,6 +133,7 @@ void startMainLoop(Scene2D &scene)
     {
         handleInput(scene);
         mainloop(&scene);
+        //if ( scene.tick % 10 == 1)
         SDL_GL_SwapWindow(scene.window);
     }
 }
@@ -152,6 +153,7 @@ void initScene(Scene2D &scene)
 
     scene.window = SDL_CreateWindow("meh", 0, 0, 512, 512, SDL_WINDOW_OPENGL);
     SDL_GLContext context = SDL_GL_CreateContext(scene.window);
+    (void) context;
 }
 
 #endif

@@ -11,6 +11,7 @@
 #include "ecs.h"
 #include "systems.h"
 #include "controller.h"
+#include "tools.h"
 
 EntityManager &s = EntityManager::getInstance();
 
@@ -57,7 +58,7 @@ public:
             for( std::string line; std::getline(istr, line); ++y)
             {
                 printf("y: %2d ", y);
-                for ( int x = 0; x < line.length(); ++x )
+                for ( int x = 0; x < (int)line.length(); ++x )
                 {
                     printf(">(%d,%d)<", x+offset.x,y+offset.y);
                     if ( x > w )
@@ -88,11 +89,11 @@ public:
             std::cerr << e.what() << '\n';
         }
 
-	// index in tile-set to be used
-	// indices correspond to the sum of neighbor positions
-	//  1		1/2		2  
-	//  1/2		x		2/8
-	//   4		4/8     8
+        // index in tile-set to be used
+        // indices correspond to the sum of neighbor positions
+        //  1		1/2		2  
+        //  1/2		x		2/8
+        //   4		4/8     8
         for ( std::pair<const Vec2i, LevelTile> &tile : level.data )
         {
             int x = tile.first.x;
@@ -117,7 +118,7 @@ public:
             tile.second.orientation = cnt;
             printf("LEVEL %2d %2d -> %d\n", x, y, cnt);
         }
-        printf("LEVEL size: %d\n", level.data.size());
+        printf("LEVEL size: %ld\n", level.data.size());
         
         return level;
     }
@@ -168,7 +169,7 @@ public:
 
         Components collisionComponents;
         collisionComponents.set(s.getComponentID<Object2D *>());
-        collisionComponents.set(s.getComponentID<Bounds>());
+        collisionComponents.set(s.getComponentID<Bounds *>());
         collisionDetection = s.addSystem(collisionComponents, "collision");
     }
     bool update(float delta_s)
@@ -186,17 +187,8 @@ public:
         int idxTile = 0;
         for ( auto tile : tiles )
         {
-            Vec2 texSize{
-                        (float)fmod(tile.second.orientation, 4.0),
-                        (int)(tile.second.orientation / 4.0)
-                        
-                        };
-            //texSize.x = 0;
-            //texSize.y = 0;
-            printf("drawing tile %d at %d %d with tile %d of size %f %f\n",
-                idxTile, tile.first.x, tile.first.y, tile.second.orientation,
-                texSize.x, texSize.y
-                );
+            Vec2 texSize{(float)fmod(tile.second.orientation, 4.0),
+                        (float)(int)(tile.second.orientation / 4.0)};
             bgObj->updateInstanceTypePos(idxTile++, true,
                     Vec2{(float)tile.first.x, (float)tile.first.y},
                     texSize);
@@ -214,22 +206,26 @@ public:
         /// NOTE: somehow player entity is deleted ...
         for ( auto entity : s.getSystemEntities(collisionDetection) )
         {
-            Bounds &bounds = s.getComponent<Bounds>(entity);
-            MotionParameters_t &motion = s.getComponent<MotionParameters_t>(entity);
+            Bounds *bounds = s.getComponent<Bounds*>(entity);
+                printf("entity %d pos at %f %f\n", entity, bounds->pos.x, bounds->pos.y);
+            MotionParameters_t *motion = s.getComponent<MotionParameters_t*>(entity);
             Bounds tmpNextBounds = {
                 Vec2{
-                    bounds.pos.x + motion.speed.x * delta_s,
-                    bounds.pos.y + motion.speed.y * delta_s },
-                bounds.size
+                    bounds->pos.x + motion->speed.x * delta_s,
+                    bounds->pos.y + motion->speed.y * delta_s },
+                bounds->size
             };
             if ( data.intersects(tmpNextBounds) )
             {
-                motion.speed.x = 0.f;
-                motion.speed.y = 0.f;
+                motion->speed.x = 0.f;
+                motion->speed.y = 0.f;
                 printf("entity %d collided with level - not moving!\n", entity);
             }
-            bounds.pos.x += motion.speed.x * delta_s;
-            bounds.pos.y += motion.speed.y * delta_s;
+                printf("entity %d pos at %f %f\n", entity, bounds->pos.x, bounds->pos.y);
+                printf("entity %d m.s at %f %f d %f\n", entity, motion->speed.x, motion->speed.y, delta_s);
+            bounds->pos.x += motion->speed.x * delta_s;
+            bounds->pos.y += motion->speed.y * delta_s;
+                printf("entity %d pos at %f %f\n", entity, bounds->pos.x, bounds->pos.y);
         }
 
         /* animations */
@@ -241,15 +237,18 @@ public:
         int c = 0;
         for (auto entity : s.getSystemEntities(drawingSystem))
         {
-            Bounds &b = s.getComponent<Bounds>(entity);
+            Bounds *b = s.getComponent<Bounds *>(entity);
             Object2D *t = s.getComponent<Object2D *>(entity);
             printf("draw entity %d\n", entity);
             if ( t )
             {
-                t->setPosition(b.pos);
+                printf("DBG entity#%d bounds at %p\n", entity, b);
+                printf("\tpos at %f %f\n", b->pos.x, b->pos.y);
+                t->setPosition(b->pos);
                 // s.getComponent<Object2D *>(entity)->update(delta_s);
                 t->updateAnimation(delta_s);
                 t->draw();
+                printf("entity %d pos at %f %f\n", entity, b->pos.x, b->pos.y);
                 // s.getComponent<Tile *>(entity)->printPointers();
             }
             else
@@ -406,7 +405,10 @@ void mainloop(void *userData)
     float delta = (now - scene->last) / 1000.0;
     scene->controller->update(delta);
     scene->currentLevel->update(delta);
-    scene->currentLevel->draw(delta);
+    //if ( scene->tick++ %10 == 0)
+    {
+        scene->currentLevel->draw(delta);
+    }
 
     scene->last = now;
     //printf("tick\n");
@@ -418,6 +420,7 @@ EntityID player;
 void move(const Vec2i &dir)
 {
     Bounds &b = s.getComponent<Bounds>(player);
+    printf("DBG player bounds at %p\n", &b);
     b.pos.x += dir.x/10.0;
     b.pos.y += dir.y/10.0;
     printf("move\n");
@@ -443,9 +446,13 @@ int main()
 
     player = s.newEntity("player");
     s.addComponent<Object2D*>(player, obj);
-    Bounds bounds;
-    bounds.pos = Vec2{1,1};
-    s.addComponent<Bounds>(player, bounds);
+    Bounds *bounds = new Bounds;
+    bounds->pos = Vec2{1,1};
+    s.addComponent<Bounds*>(player, bounds);
+    MotionParameters_t *motion = new MotionParameters_t;
+    motion->speed = {0,0};
+    s.addComponent<MotionParameters_t*>(player, motion);
+    printf("DBG player bounds at %p\n", bounds);
 
     scene.controller = new Controller(player);
 
@@ -460,13 +467,18 @@ int main()
 
     EntityID background = s.newEntity("background");
     s.addComponent<Object2D*>(background,iobj);
-    Bounds bgbounds;
-    bgbounds.pos = Vec2{1,1};
-    s.addComponent<Bounds>(background, bgbounds);
+    Bounds *bgbounds = new Bounds;
+    bgbounds->pos = Vec2{1,1};
+    s.addComponent<Bounds*>(background, bgbounds);
+    MotionParameters_t *bgMotion = new MotionParameters_t;
+    bgMotion->speed = {0,0};
+    s.addComponent<MotionParameters_t*>(background, bgMotion);
 
     scene.currentLevel = new Level(LevelData::load("level.txt", Vec2i{-5,-5}), background);
 
     s.showAll();
+
+    scene.tick = 0;
 
     startMainLoop(scene);
 

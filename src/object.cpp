@@ -1,4 +1,5 @@
 #include "types.h"
+#include "tools.h"
 
 void Object2D::draw()
 {
@@ -21,6 +22,7 @@ void Object2D::draw()
 
 void Object2D::setPosition(Vec2 pos)
 {
+    Tools::validate(pos);
     printf("move to %2.2f %2.2f\n", pos.x, pos.y);
     float idMat[] = {1,0,0,0,
                     0,1,0,0,
