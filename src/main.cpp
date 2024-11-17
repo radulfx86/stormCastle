@@ -171,9 +171,19 @@ public:
         collisionComponents.set(s.getComponentID<Object2D *>());
         collisionComponents.set(s.getComponentID<Bounds *>());
         collisionDetection = s.addSystem(collisionComponents, "collision");
+
+        Components actionComponents;
+        actionComponents.set(s.getComponentID<InteractionParameters_t *>());
+        actionHandling = s.addSystem(actionComponents, "actions");
+
+        Components triggerComponents;
+        triggerComponents.set(s.getComponentID<Bounds *>());
+        triggerComponents.set(s.getComponentID<TriggerFunction>());
+        triggers = s.addSystem(triggerComponents, "triggers");
     }
     bool update(float delta_s)
     {
+        s.updateSystem(actionHandling);
         /* level background */
         /* TODO:
         - get view-cone (optional)
@@ -201,6 +211,37 @@ public:
         }
         printf("had %d tiles, now %d\n", numTiles, newNumTiles);
         numTiles = newNumTiles;
+
+        /* interactions */
+        for ( auto entity : s.getSystemEntities(actionHandling) )
+        {
+            InteractionParameters_t *interaction = s.getComponent<InteractionParameters_t*>(entity);
+            if ( interaction->active )
+            {
+                printf("interaction for entity %d of type %d\n", entity, interaction->type);
+                Bounds *sourceBounds = s.getComponent<Bounds*>(entity);
+                for ( auto triggerEntity : s.getSystemEntities(triggers) )
+                {
+                    if ( entity != triggerEntity )
+                    {
+                        Bounds *targetBounds = s.getComponent<Bounds*>(triggerEntity);
+                        if ( Tools::doesIntersect(sourceBounds, targetBounds) )
+                        {
+                            TriggerFunction triggerFunction = s.getComponent<TriggerFunction>(triggerEntity);
+                            (triggerFunction)(triggerEntity, entity);
+                        }
+                        else
+                        {
+                            printf("trigger [%f %f %f %f] does not intersect [%f %f %f %f]\n",
+                                   sourceBounds->pos.x, sourceBounds->pos.y, sourceBounds->size.x, sourceBounds->size.y,
+                                   targetBounds->pos.x, targetBounds->pos.y, targetBounds->size.x, targetBounds->size.y );
+                            TriggerFunction triggerFunction = s.getComponent<TriggerFunction>(triggerEntity);
+                            (triggerFunction)(triggerEntity, entity);
+                        }
+                    }
+                }
+            }
+        }
 
         /* collision */
         /// NOTE: somehow player entity is deleted ...
@@ -266,6 +307,8 @@ private:
     AnimationSystem animations;
     SystemID collisionDetection;
     SystemID drawingSystem;
+    SystemID actionHandling;
+    SystemID triggers;
     LevelData data;
     EntityID background;
     int numTiles;
@@ -448,11 +491,15 @@ int main()
     s.addComponent<Object2D*>(player, obj);
     Bounds *bounds = new Bounds;
     bounds->pos = Vec2{1,1};
+    bounds->size = Vec2{1,1};
     s.addComponent<Bounds*>(player, bounds);
     MotionParameters_t *motion = new MotionParameters_t;
     motion->speed = {0,0};
     s.addComponent<MotionParameters_t*>(player, motion);
     printf("DBG player bounds at %p\n", bounds);
+    InteractionParameters_t *interaction = new InteractionParameters_t;
+    interaction->active = false;
+    s.addComponent<InteractionParameters_t*>(player, interaction);
 
     scene.controller = new Controller(player);
 
@@ -473,6 +520,18 @@ int main()
     MotionParameters_t *bgMotion = new MotionParameters_t;
     bgMotion->speed = {0,0};
     s.addComponent<MotionParameters_t*>(background, bgMotion);
+
+
+    /* trigger */
+    auto triggerFun = [](int target, int source) -> void {
+        printf("trigger enabled: target: %d, source: %d\n", target, source);
+    };
+    Bounds *triggerBounds = new Bounds;
+    triggerBounds->size = {4,4};
+    triggerBounds->pos = {-1,-1};
+    EntityID trigger = s.newEntity("trigger");
+    s.addComponent<Bounds*>(trigger, triggerBounds);
+    s.addComponent<TriggerFunction>(trigger, (TriggerFunction) triggerFun);
 
     scene.currentLevel = new Level(LevelData::load("level.txt", Vec2i{-5,-5}), background);
 

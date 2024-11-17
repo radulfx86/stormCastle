@@ -29,8 +29,13 @@ class Controller
                     m->speed.x = action.v2iParam.x != 0 ? 0 : m->speed.x;
                     m->speed.y = action.v2iParam.y != 0 ? 0 : m->speed.y;
                 }
-                //b->pos.x += action.v2iParam.x / 10.0;
-                //b->pos.y += action.v2iParam.y / 10.0;
+            }
+            else if ( action.TYPE == Action::INTERACT )
+            {
+                InteractionParameters_t *i = EntityManager::getInstance().getComponent<InteractionParameters_t*>(target);
+                i->type = InteractionParameters_t::TRIGGER;
+                i->direction = m->speed;
+                i->active = true;
             }
         }
         actions.clear();

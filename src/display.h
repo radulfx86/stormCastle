@@ -31,6 +31,35 @@ EM_BOOL keydown_callback(int eventType, const EmscriptenKeyboardEvent *keyEvent,
         scene->running = false;
         break;
     case 0x27:  // right arrow
+        scene->controller->addAction(Action{Action::MOTION, Vec2i{1, 0}, {0}, true});
+        break;
+    case 0x25:  // left arrow
+        scene->controller->addAction(Action{Action::MOTION, Vec2i{-1, 0}, {0}, true});
+        break;
+    case 0x26:  // up arrow
+        scene->controller->addAction(Action{Action::MOTION, Vec2i{0, 1}, {0}, true});
+        break;
+    case 0x28:  // down arrow
+        scene->controller->addAction(Action{Action::MOTION, Vec2i{0, -1}, {0}, true});
+        break;
+    case 0x20:  // space
+        scene->controller->addAction(Action{Action::INTERACT, {0}, {0}, true});
+        break;
+    default:
+        break;
+    }
+    return 0;
+}
+
+EM_BOOL keyup_callback(int eventType, const EmscriptenKeyboardEvent *keyEvent, void *userData)
+{
+    Scene2D *scene = (Scene2D *)userData;
+    switch (keyEvent->keyCode)
+    {
+    case 0x1B:  // escape
+        scene->running = false;
+        break;
+    case 0x27:  // right arrow
         scene->controller->addAction(Action{Action::MOTION, Vec2i{1, 0}, {0}, false});
         break;
     case 0x25:  // left arrow
@@ -77,6 +106,7 @@ void initScene(Scene2D &scene)
     emscripten_set_click_callback("#canvas", 0, 1, mouse_callback);
     emscripten_set_touchend_callback("#canvas", 0, 1, touch_callback);
     emscripten_set_keydown_callback("#canvas", &scene, 1, keydown_callback);
+    emscripten_set_keyup_callback("#canvas", &scene, 1, keyup_callback);
 }
 
 void startMainLoop(Scene2D &scene)

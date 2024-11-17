@@ -32,3 +32,18 @@ void Tools::validate(Object2D el)
     (void) el;
     /// TODO
 }
+
+bool Tools::doesIntersect(Bounds * sourceBounds, Bounds * targetBounds)
+{
+   return sourceBounds && targetBounds &&
+        (inBounds(sourceBounds, targetBounds->pos) 
+         || inBounds(sourceBounds, Vec2{targetBounds->pos.x, targetBounds->pos.y + targetBounds->size.y}) 
+         || inBounds(sourceBounds, Vec2{targetBounds->pos.x + targetBounds->size.x, targetBounds->pos.y + targetBounds->size.y}) 
+         || inBounds(sourceBounds, Vec2{targetBounds->pos.x + targetBounds->size.x, targetBounds->pos.y}));
+}
+bool Tools::inBounds(const Bounds * bounds, const Vec2 pos)
+{
+    return bounds &&
+        (pos.x > bounds->pos.x && pos.x < bounds->pos.x+bounds->size.x)
+        && (pos.y > bounds->pos.y && pos.y < bounds->pos.y+bounds->size.y);
+}

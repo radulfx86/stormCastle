@@ -97,6 +97,14 @@ typedef struct {
     Vec2 acc;
 } MotionParameters_t;
 
+typedef struct {
+    bool active;
+    Vec2 direction;
+    enum { NONE, TALK, TAKE, GIVE, TRIGGER, MOVE, MELEE, RANGED, NUM_INTERACTIONS } type;
+} InteractionParameters_t;
+
+typedef void (*TriggerFunction)(int target, int source);
+
 class Level;
 
 class Controller;
