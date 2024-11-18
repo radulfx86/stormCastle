@@ -178,7 +178,7 @@ public:
         {
             WeightedVec2i el = pq.top();
             pq.pop();
-            printf("test path of length %d to pos %d %d (target %d %d)\n", el.path.size(), el.pos.x, el.pos.y, end.x, end.y);
+            printf("test path of length %d to pos %d %d (target %d %d) pq size: %d\n", el.path.size(), el.pos.x, el.pos.y, end.x, end.y, pq.size());
             if (end == el.pos)
             {
                 el.path.push_back(el.pos);
@@ -281,21 +281,17 @@ public:
             {
                 printf("interaction for entity %d of type %d\n", entity, interaction->type);
                 Bounds *sourceBounds = s.getComponent<Bounds*>(entity);
+                Bounds triggerBounds = *sourceBounds;
+                triggerBounds.pos = triggerBounds.pos + interaction->direction;
                 for ( auto triggerEntity : s.getSystemEntities(triggers) )
                 {
                     if ( entity != triggerEntity )
                     {
                         Bounds *targetBounds = s.getComponent<Bounds*>(triggerEntity);
-                        if ( Tools::doesIntersect(sourceBounds, targetBounds) )
+                        if ( Tools::doesIntersect(&triggerBounds, targetBounds) )
                         {
                             TriggerFunction triggerFunction = s.getComponent<TriggerFunction>(triggerEntity);
                             (triggerFunction)(triggerEntity, entity);
-                        }
-                        else
-                        {
-                            printf("trigger [%f %f %f %f] does not intersect [%f %f %f %f]\n",
-                                   sourceBounds->pos.x, sourceBounds->pos.y, sourceBounds->size.x, sourceBounds->size.y,
-                                   targetBounds->pos.x, targetBounds->pos.y, targetBounds->size.x, targetBounds->size.y );
                         }
                     }
                 }
@@ -429,9 +425,9 @@ void createObject(Object2D &obj, GLuint program, float tileSize = 1.0, Vec2 spri
                     0,1,0,0,
                     0,0,1,0,
                     0,0,0,1};
-    float idMat_01[] = {.1f,0,0,0,
-                    0,.1f,0,0,
-                    0,0,.1f,0,
+    float idMat_01[] = {.125f,0,0,0,
+                    0,.125f,0,0,
+                    0,0,.125f,0,
                     0,0,0,1};
     glUseProgram(obj.program);
     glUniform1i(glGetUniformLocation(obj.program, "tex"), 0);
