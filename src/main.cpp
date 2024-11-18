@@ -12,6 +12,7 @@
 #include "systems.h"
 #include "controller.h"
 #include "tools.h"
+#include "state_machine.h"
 
 EntityManager &s = EntityManager::getInstance();
 
@@ -20,6 +21,8 @@ EntityManager &s = EntityManager::getInstance();
 
 
 #include <iostream>
+#include <set>
+#include <queue>
 
 class LevelData
 {
@@ -152,8 +155,58 @@ public:
         }
         return tiles;
     }
+    std::vector<Vec2i> getPathTo(Vec2i start, Vec2i end)
+    {
+        struct WeightedVec2i{
+            Vec2i pos;
+            int distanceSquared;
+            std::vector<Vec2i> path;
+        };
+        std::vector<Vec2i> path;
+        std::set<Vec2i> seen;
+        auto cmp = [&](WeightedVec2i l, WeightedVec2i r) { return l.distanceSquared > r.distanceSquared; };
+        std::priority_queue<WeightedVec2i, std::vector<WeightedVec2i>, decltype(cmp)> pq(cmp);
+
+        auto getWeightedVec2i = [] (Vec2i pos, Vec2i target, std::vector<Vec2i> path) -> WeightedVec2i
+        {
+            path.push_back(pos);
+            return WeightedVec2i{pos, (target.x - pos.x) * (target.x - pos.x) + (target.y - pos.y) * (target.y - pos.y), path};
+        };
+
+        pq.push(getWeightedVec2i(start, end, {}));
+        do
+        {
+            WeightedVec2i el = pq.top();
+            pq.pop();
+            printf("test path of length %d to pos %d %d (target %d %d)\n", el.path.size(), el.pos.x, el.pos.y, end.x, end.y);
+            if (end == el.pos)
+            {
+                el.path.push_back(el.pos);
+                path = el.path;
+                break;
+            }
+            for (int x = -1; x < 2; ++x)
+            {
+                for (int y = -1; y < 2; ++y)
+                {
+                    if ( not (x == 0 || y == 0) )
+                        continue;
+                    Vec2i next{el.pos.x + x, el.pos.y + y};
+                    if (data.find(next) != data.end())
+                    {
+                        continue;
+                    }
+                    std::vector<Vec2i> tmp = el.path;
+                    pq.push(getWeightedVec2i(next, end, tmp));
+                }
+            }
+        } while (not pq.empty());
+
+        return path;
+    }
 private:
     std::map<Vec2i, LevelTile> data;
+
 };
 
 class Level
@@ -180,6 +233,14 @@ public:
         triggerComponents.set(s.getComponentID<Bounds *>());
         triggerComponents.set(s.getComponentID<TriggerFunction>());
         triggers = s.addSystem(triggerComponents, "triggers");
+
+
+        std::vector<Vec2i> path = data.getPathTo(Vec2i{0,0}, Vec2i{3,3});
+        for ( const Vec2i &el : path )
+        {
+            printf("path element %d %d\n", el.x, el.y);
+        }
+        //exit(3);
     }
     bool update(float delta_s)
     {
@@ -235,8 +296,6 @@ public:
                             printf("trigger [%f %f %f %f] does not intersect [%f %f %f %f]\n",
                                    sourceBounds->pos.x, sourceBounds->pos.y, sourceBounds->size.x, sourceBounds->size.y,
                                    targetBounds->pos.x, targetBounds->pos.y, targetBounds->size.x, targetBounds->size.y );
-                            TriggerFunction triggerFunction = s.getComponent<TriggerFunction>(triggerEntity);
-                            (triggerFunction)(triggerEntity, entity);
                         }
                     }
                 }
@@ -244,29 +303,43 @@ public:
         }
 
         /* collision */
-        /// NOTE: somehow player entity is deleted ...
         for ( auto entity : s.getSystemEntities(collisionDetection) )
         {
-            Bounds *bounds = s.getComponent<Bounds*>(entity);
-                printf("entity %d pos at %f %f\n", entity, bounds->pos.x, bounds->pos.y);
-            MotionParameters_t *motion = s.getComponent<MotionParameters_t*>(entity);
+            Bounds *bounds = s.getComponent<Bounds *>(entity);
+            printf("entity %d pos at %f %f\n", entity, bounds->pos.x, bounds->pos.y);
+            MotionParameters_t *motion = s.getComponent<MotionParameters_t *>(entity);
             Bounds tmpNextBounds = {
                 Vec2{
                     bounds->pos.x + motion->speed.x * delta_s,
-                    bounds->pos.y + motion->speed.y * delta_s },
-                bounds->size
-            };
-            if ( data.intersects(tmpNextBounds) )
+                    bounds->pos.y + motion->speed.y * delta_s},
+                bounds->size};
+            // entity <-> level intersection
+            if (data.intersects(tmpNextBounds))
             {
                 motion->speed.x = 0.f;
                 motion->speed.y = 0.f;
                 printf("entity %d collided with level - not moving!\n", entity);
             }
-                printf("entity %d pos at %f %f\n", entity, bounds->pos.x, bounds->pos.y);
-                printf("entity %d m.s at %f %f d %f\n", entity, motion->speed.x, motion->speed.y, delta_s);
+            // entity <-> entity intersection
+            for ( auto other : s.getSystemEntities(collisionDetection) )
+            {
+                if (entity == other)
+                {
+                    continue;
+                }
+                Bounds *otherBounds = s.getComponent<Bounds *>(other);
+                if (Tools::doesIntersect(&tmpNextBounds, otherBounds))
+                {
+                    motion->speed.x = 0.f;
+                    motion->speed.y = 0.f;
+                    printf("entity %d collided with entity %d - not moving!\n", other, entity);
+                }
+            }
+            printf("entity %d pos at %f %f\n", entity, bounds->pos.x, bounds->pos.y);
+            printf("entity %d m.s at %f %f d %f\n", entity, motion->speed.x, motion->speed.y, delta_s);
             bounds->pos.x += motion->speed.x * delta_s;
             bounds->pos.y += motion->speed.y * delta_s;
-                printf("entity %d pos at %f %f\n", entity, bounds->pos.x, bounds->pos.y);
+            printf("entity %d pos at %f %f\n", entity, bounds->pos.x, bounds->pos.y);
         }
 
         /* animations */
@@ -457,16 +530,72 @@ void mainloop(void *userData)
     //printf("tick\n");
 }
 
-
-EntityID player;
-
 void move(const Vec2i &dir)
 {
-    Bounds &b = s.getComponent<Bounds>(player);
-    printf("DBG player bounds at %p\n", &b);
-    b.pos.x += dir.x/10.0;
-    b.pos.y += dir.y/10.0;
-    printf("move\n");
+    (void)dir;
+    printf("DEPRECATED - DO NOT USE\n");
+    exit(3);
+}
+
+EntityID addNPC(GLuint tex, GLuint program)
+{
+    EntityID npc = s.newEntity("npc");
+    Bounds *npcBounds = new Bounds;
+    npcBounds->size = {1,1};
+    npcBounds->pos = {2,2};
+    Object2D *npcObj = new Object2D;
+    createObject(*npcObj, program);
+    npcObj->tex = tex;
+    MotionParameters_t *npcMotion = new MotionParameters_t;
+    npcMotion->speed = {0,0};
+
+    StateMachine *npcStateMachine = new StateMachine(npc);
+
+    s.addComponent<Object2D*>(npc, npcObj);
+    s.addComponent<Bounds*>(npc, npcBounds);
+    s.addComponent<MotionParameters_t*>(npc, npcMotion);
+    s.addComponent<StateMachine*>(npc, npcStateMachine);
+
+    return npc;
+}
+
+EntityID initBackground()
+{
+    InstancedObject2D *iobj = new InstancedObject2D;
+    GLuint instancedProgram = createShader(loadText("shaders/simple.instanced.vs").c_str(), loadText("shaders/simple.instanced.fs").c_str());
+    //createInstancedObject(*iobj, instancedProgram);
+    createInstanceBackground(*iobj, instancedProgram);
+    iobj->tex = loadTexture("assets/images/tiles.png",0);
+    EntityID background = s.newEntity("background");
+    s.addComponent<Object2D*>(background,iobj);
+    Bounds *bgbounds = new Bounds;
+    bgbounds->pos = Vec2{0,0};
+    s.addComponent<Bounds*>(background, bgbounds);
+    MotionParameters_t *bgMotion = new MotionParameters_t;
+    bgMotion->speed = {0,0};
+    s.addComponent<MotionParameters_t*>(background, bgMotion);
+    printf("level tex: %d\n", iobj->tex);
+
+    return background;
+}
+
+EntityID initPlayer(Object2D *obj)
+{
+    EntityID player = s.newEntity("player");
+    s.addComponent<Object2D*>(player, obj);
+    Bounds *bounds = new Bounds;
+    bounds->pos = Vec2{1,1};
+    bounds->size = Vec2{1,1};
+    s.addComponent<Bounds*>(player, bounds);
+    MotionParameters_t *motion = new MotionParameters_t;
+    motion->speed = {0,0};
+    s.addComponent<MotionParameters_t*>(player, motion);
+    printf("DBG player bounds at %p\n", bounds);
+    InteractionParameters_t *interaction = new InteractionParameters_t;
+    interaction->active = false;
+    s.addComponent<InteractionParameters_t*>(player, interaction);
+
+    return player;
 }
 
 int main()
@@ -487,39 +616,13 @@ int main()
     createObject(*obj, program);
     obj->tex = loadTexture("assets/images/characters.png",0);
 
-    player = s.newEntity("player");
-    s.addComponent<Object2D*>(player, obj);
-    Bounds *bounds = new Bounds;
-    bounds->pos = Vec2{1,1};
-    bounds->size = Vec2{1,1};
-    s.addComponent<Bounds*>(player, bounds);
-    MotionParameters_t *motion = new MotionParameters_t;
-    motion->speed = {0,0};
-    s.addComponent<MotionParameters_t*>(player, motion);
-    printf("DBG player bounds at %p\n", bounds);
-    InteractionParameters_t *interaction = new InteractionParameters_t;
-    interaction->active = false;
-    s.addComponent<InteractionParameters_t*>(player, interaction);
+    EntityID player = initPlayer(obj);
 
     scene.controller = new Controller(player);
 
-    InstancedObject2D *iobj = new InstancedObject2D;
-    GLuint instancedProgram = createShader(loadText("shaders/simple.instanced.vs").c_str(), loadText("shaders/simple.instanced.fs").c_str());
-    //createInstancedObject(*iobj, instancedProgram);
-    createInstanceBackground(*iobj, instancedProgram);
-    iobj->tex = loadTexture("assets/images/tiles.png",0);
+    printf("player tex: %d\n", obj->tex);
 
-
-    printf("player tex: %d level tex: %d\n", obj->tex, iobj->tex);
-
-    EntityID background = s.newEntity("background");
-    s.addComponent<Object2D*>(background,iobj);
-    Bounds *bgbounds = new Bounds;
-    bgbounds->pos = Vec2{1,1};
-    s.addComponent<Bounds*>(background, bgbounds);
-    MotionParameters_t *bgMotion = new MotionParameters_t;
-    bgMotion->speed = {0,0};
-    s.addComponent<MotionParameters_t*>(background, bgMotion);
+    EntityID background = initBackground();
 
 
     /* trigger */
@@ -532,6 +635,11 @@ int main()
     EntityID trigger = s.newEntity("trigger");
     s.addComponent<Bounds*>(trigger, triggerBounds);
     s.addComponent<TriggerFunction>(trigger, (TriggerFunction) triggerFun);
+
+    /* NPC */
+    EntityID npc = addNPC(obj->tex, program);
+    printf("npc entity has id %d\n", npc);
+
 
     scene.currentLevel = new Level(LevelData::load("level.txt", Vec2i{-5,-5}), background);
 
