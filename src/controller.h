@@ -35,6 +35,7 @@ class Controller
                 InteractionParameters_t *i = EntityManager::getInstance().getComponent<InteractionParameters_t*>(target);
                 i->type = InteractionParameters_t::TRIGGER;
                 i->direction = m->speed;
+                printf("new interaction - direction: %f %f\n", i->direction.x, i->direction.y);
                 i->active = true;
             }
         }

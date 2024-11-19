@@ -178,7 +178,7 @@ public:
         {
             WeightedVec2i el = pq.top();
             pq.pop();
-            printf("test path of length %d to pos %d %d (target %d %d) pq size: %d\n", el.path.size(), el.pos.x, el.pos.y, end.x, end.y, pq.size());
+            printf("test path of length %lu to pos %d %d (target %d %d) pq size: %lu\n", el.path.size(), el.pos.x, el.pos.y, end.x, end.y, pq.size());
             if (end == el.pos)
             {
                 el.path.push_back(el.pos);
@@ -206,7 +206,6 @@ public:
     }
 private:
     std::map<Vec2i, LevelTile> data;
-
 };
 
 class Level
@@ -279,7 +278,7 @@ public:
             InteractionParameters_t *interaction = s.getComponent<InteractionParameters_t*>(entity);
             if ( interaction->active )
             {
-                printf("interaction for entity %d of type %d\n", entity, interaction->type);
+                printf("interaction for entity %d of type %d dir(%f %f)\n", entity, interaction->type, interaction->direction.x, interaction->direction.y);
                 Bounds *sourceBounds = s.getComponent<Bounds*>(entity);
                 Bounds triggerBounds = *sourceBounds;
                 triggerBounds.pos = triggerBounds.pos + interaction->direction;
@@ -552,6 +551,11 @@ EntityID addNPC(GLuint tex, GLuint program)
     s.addComponent<MotionParameters_t*>(npc, npcMotion);
     s.addComponent<StateMachine*>(npc, npcStateMachine);
 
+    auto triggerFun = [](int target, int source) -> void {
+        printf("NPC triggered target: %d, source: %d\n", target, source);
+    };
+    s.addComponent<TriggerFunction>(npc, (TriggerFunction) triggerFun);
+
     return npc;
 }
 
@@ -573,6 +577,54 @@ EntityID initBackground()
     printf("level tex: %d\n", iobj->tex);
 
     return background;
+}
+EntityID addText()
+{
+    Text2D *obj = new Text2D;
+    GLuint instancedProgram = createShader(loadText("shaders/simple.instanced.vs").c_str(), loadText("shaders/simple.instanced.fs").c_str());
+
+    createObject(*obj, instancedProgram);
+    obj->texOffset = 1;
+    glUseProgram(obj->program);
+    glUniform1i(glGetUniformLocation(obj->program, "tex"), 0);
+    glUseProgram(0);
+    obj->size = Vec2{1,1};
+    obj->pos = Vec2{-2,0};
+    obj->setCharacterSize(Vec2{1.0/36.0, 0.5});
+    obj->numInstances = 0;
+    int c = 0;
+    for ( char i = 'a'; i <= 'z'; ++i, ++c )
+    {
+        obj->setTextIndex(i, c);
+    }
+    for ( char i = '0'; i <= '9'; ++i, ++c )
+    {
+        obj->setTextIndex(i, c);
+    }
+    for ( char i = 'A'; i <= 'Z'; ++i, ++c )
+    {
+        obj->setTextIndex(i, c);
+    }
+    obj->setTextIndex(' ', c);
+    obj->textureColumns = 36;
+
+    obj->tex = loadTexture("assets/images/font4_8.png",0);
+    EntityID text = s.newEntity("text");
+    s.addComponent<Object2D*>(text,obj);
+    Bounds *bgbounds = new Bounds;
+    bgbounds->pos = Vec2{0,0};
+    s.addComponent<Bounds*>(text, bgbounds);
+    MotionParameters_t *bgMotion = new MotionParameters_t;
+    bgMotion->speed = {0,0};
+    s.addComponent<MotionParameters_t*>(text, bgMotion);
+    printf("level tex: %d\n", obj->tex);
+
+
+
+    obj->setText("hello World");
+
+    return text;
+
 }
 
 EntityID initPlayer(Object2D *obj)
@@ -620,7 +672,7 @@ int main()
 
     EntityID background = initBackground();
 
-
+#if 0
     /* trigger */
     auto triggerFun = [](int target, int source) -> void {
         printf("trigger enabled: target: %d, source: %d\n", target, source);
@@ -631,10 +683,15 @@ int main()
     EntityID trigger = s.newEntity("trigger");
     s.addComponent<Bounds*>(trigger, triggerBounds);
     s.addComponent<TriggerFunction>(trigger, (TriggerFunction) triggerFun);
+    #endif
 
     /* NPC */
     EntityID npc = addNPC(obj->tex, program);
     printf("npc entity has id %d\n", npc);
+
+
+    EntityID text = addText();
+    (void) text;
 
 
     scene.currentLevel = new Level(LevelData::load("level.txt", Vec2i{-5,-5}), background);

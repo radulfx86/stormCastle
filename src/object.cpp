@@ -196,3 +196,33 @@ void InstancedObject2D::draw()
 
     glUseProgram(0);
 }
+
+void Text2D::setText(std::string text)
+{
+    int oldNumInstances = numInstances;
+    numInstances = text.size();
+    for ( int i = numInstances; i < oldNumInstances; ++i )
+    {
+        InstancedObject2D::updateInstanceType(i, false, Vec2{0,0});
+    }
+    Vec2 pos = this->pos;
+    for ( int idxText = 0; idxText < numInstances; ++idxText )
+    {
+        pos.x = idxText / 1.5; // this->characterSize.x;
+        if ( text[idxText] == '\n' || text[idxText] == '\r' )
+        {
+            pos.x = this->pos.x;
+            pos.y += 0.1; //this->characterSize.y;
+        }
+        InstancedObject2D::updateInstanceType(textIndex[text[idxText]], true, Vec2{0,0});
+        int idxChar = textIndex[text[idxText]];
+        Vec2 texPos{(float)(idxChar % this->textureColumns), (float)(idxChar / this->textureColumns) };
+        printf("set Text %d '%c' -> %d t: %f %f p: %f %f\n", idxText, text[idxText], idxChar, texPos.x, texPos.y, pos.x, pos.y);
+        InstancedObject2D::updateInstance(idxText, true, pos, texPos, this->characterSize);
+    }
+    
+}
+void Text2D::setCharacterSize(Vec2 size)
+{
+    this->characterSize = size;
+}

@@ -3,6 +3,8 @@
 #include "gl_headers.h"
 #include <unordered_map>
 #include <vector>
+#include <map>
+#include <string>
 
 
 typedef struct Vec2
@@ -94,6 +96,19 @@ public:
     void updateInstance(int instance, bool enabled, Vec2 pos, Vec2 texPos, Vec2 texSize);
     void updateInstanceType(int instance, bool enabled, Vec2 texPos);
     void updateInstanceTypePos(int instance, bool enabled, Vec2 pos, Vec2 texPos);
+};
+
+class Text2D : public InstancedObject2D
+{
+public:
+    void setText(std::string text);
+    void setCharacterSize(Vec2 size);
+    virtual void draw() override { InstancedObject2D::draw(); }
+    virtual void updateAnimation(float delta_s) override { InstancedObject2D::updateAnimation(delta_s); }
+    Vec2 characterSize;
+    std::map<char, int> textIndex;
+    void setTextIndex(char c, int i) { textIndex[c] = i; }
+    int textureColumns;
 };
 
 typedef struct {
