@@ -67,7 +67,17 @@ typedef struct Animation {
     float currentDelta;
 } Animation;
 
-class Object2D
+class Drawable
+{
+public:
+    //Drawable() {}
+    //virtual ~Drawable() = default;
+    virtual void draw() = 0;
+    virtual void setPosition(Vec2 pos) = 0;
+    virtual void updateCamera(float view[16], float proj[16]) = 0;
+};
+
+class Object2D : public Drawable
 {
 public:
     GLuint attribPos;
@@ -78,8 +88,9 @@ public:
     GLuint texOffset;
     Animation animation;
     virtual void updateAnimation(float delta_s);
-    virtual void draw();
-    virtual void setPosition(Vec2 pos);
+    virtual void draw() override;
+    virtual void setPosition(Vec2 pos) override;
+    virtual void updateCamera(float view[16], float proj[16]) override;
 };
 
 class InstancedObject2D : public Object2D
@@ -102,15 +113,30 @@ class Text2D : public InstancedObject2D
 {
 public:
     void setText(std::string text);
-    void setCharacterSize(Vec2 size);
+    void setCharacterSize(Vec2 size, Vec2 displayDistance);
     virtual void draw() override { InstancedObject2D::draw(); }
     virtual void updateAnimation(float delta_s) override { InstancedObject2D::updateAnimation(delta_s); }
     Vec2 characterSize;
+    Vec2 characterDisplayDistance;
     std::map<char, int> textIndex;
     void setTextIndex(char c, int i) { textIndex[c] = i; }
     int textureColumns;
 };
 
+class Path2D : public Drawable
+{
+public:
+    GLuint attribPos;
+    GLuint program;
+    GLuint vao;
+    GLuint vertexBuffer;
+    std::vector<float> vertexData;
+    Path2D(std::vector<Vec2> elements, float color[3]);
+    
+    virtual void draw() override;
+    virtual void setPosition(Vec2 pos);
+    virtual void updateCamera(float view[16], float proj[16]) override;
+};
 typedef struct {
     Vec2 speed;
     Vec2 acc;

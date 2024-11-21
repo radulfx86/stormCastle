@@ -155,7 +155,7 @@ public:
         }
         return tiles;
     }
-    std::vector<Vec2i> getPathTo(Vec2i start, Vec2i end)
+    std::vector<Vec2> getPathTo(Vec2i start, Vec2i end)
     {
         struct WeightedVec2i{
             Vec2i pos;
@@ -201,8 +201,12 @@ public:
                 }
             }
         } while (not pq.empty());
-
-        return path;
+        std::vector<Vec2> vPath;
+        for ( auto p : path )
+        {
+            vPath.push_back(Vec2{(float)p.x,(float)p.y});
+        }
+        return vPath;
     }
 private:
     std::map<Vec2i, LevelTile> data;
@@ -233,16 +237,11 @@ public:
         triggerComponents.set(s.getComponentID<TriggerFunction>());
         triggers = s.addSystem(triggerComponents, "triggers");
 
-
-        std::vector<Vec2i> path = data.getPathTo(Vec2i{0,0}, Vec2i{3,3});
-        for ( const Vec2i &el : path )
-        {
-            printf("path element %d %d\n", el.x, el.y);
-        }
         //exit(3);
-    }
+    };
     bool update(float delta_s)
     {
+
         s.updateSystem(actionHandling);
         /* level background */
         /* TODO:
@@ -343,6 +342,14 @@ public:
     }
     bool draw(float delta_s)
     {
+        std::vector<Vec2> path = data.getPathTo(Vec2i{-3,-3}, Vec2i{3,3});
+        for ( const Vec2 &el : path )
+        {
+            printf("path element %f %f\n", el.x, el.y);
+        }
+        float yellow[] = {1,1,0};
+        Path2D p(path,yellow);
+        p.draw();
         int c = 0;
         for (auto entity : s.getSystemEntities(drawingSystem))
         {
@@ -590,7 +597,7 @@ EntityID addText()
     glUseProgram(0);
     obj->size = Vec2{1,1};
     obj->pos = Vec2{-2,0};
-    obj->setCharacterSize(Vec2{1.0/36.0, 0.5});
+    obj->setCharacterSize(Vec2{1.0/36.0, 0.5}, Vec2{0.8,1});
     obj->numInstances = 0;
     int c = 0;
     for ( char i = 'a'; i <= 'z'; ++i, ++c )
@@ -620,8 +627,7 @@ EntityID addText()
     printf("level tex: %d\n", obj->tex);
 
 
-
-    obj->setText("hello World");
+    obj->setText("1hello World\n1234");
 
     return text;
 

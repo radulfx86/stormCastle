@@ -1,5 +1,8 @@
 #include "types.h"
 #include "tools.h"
+/// TODO move into factories
+#include "io.h"
+#include "shaders.h"
 
 void Object2D::draw()
 {
@@ -32,6 +35,7 @@ void Object2D::setPosition(Vec2 pos)
     glUniformMatrix4fv(glGetUniformLocation(program, "model"), 1, GL_FALSE, idMat);
     glUseProgram(0);
 }
+
 void Object2D::updateAnimation(float delta_s)
 {
     bool updated = false;
@@ -65,6 +69,14 @@ void Object2D::updateAnimation(float delta_s)
         glUniform2fv(texSizeUniform, 1, this->animation.frames[this->animation.currentFrame].texSize);
         glUseProgram(0);
     }
+}
+
+void Object2D::updateCamera(float view[16], float proj[16])
+{
+    glUseProgram(this->program);
+    glUniformMatrix4fv(glGetUniformLocation(this->program, "view"), 1, GL_FALSE, view);
+    glUniformMatrix4fv(glGetUniformLocation(this->program, "projection"), 1, GL_FALSE, proj);
+    glUseProgram(0);
 }
 
 void InstancedObject2D::updateAnimation(float delta_s)
@@ -165,6 +177,8 @@ void InstancedObject2D::updateInstance(int instance, bool enabled, Vec2 pos, Vec
     {
         return;
     }
+    printf("%s(%d, %f %f, %f %f, %f %f)\n",
+        __func__, instance, pos.x, pos.y, texPos.x, texPos.y, texSize.x, texSize.y);
     sprintf(uniformName,"texInfo[%i].pos", instance);
     GLuint posUniform = glGetUniformLocation(this->program, uniformName);
     float vpos[2] = {this->pos.x + pos.x * this->size.x, this->pos.y + pos.y * this->size.y};
@@ -200,29 +214,107 @@ void InstancedObject2D::draw()
 void Text2D::setText(std::string text)
 {
     int oldNumInstances = numInstances;
-    numInstances = text.size();
+    
+    Vec2 pos{this->pos.x, this->pos.y};
+    int idxTextOut = 0;
+    for ( int idxText = 0; idxText < text.size(); ++idxText )
+    {
+        pos.x += this->characterDisplayDistance.x;
+        if ( text[idxText] == '\n' || text[idxText] == '\r' )
+        {
+            pos.x = this->pos.x;
+            pos.y -= this->characterDisplayDistance.y;
+            continue;
+        }
+        //InstancedObject2D::updateInstanceType(textIndex[text[idxText]], true, Vec2{0,0});
+        int idxChar = textIndex[text[idxText]];
+        Vec2 texPos{(float)(idxChar % this->textureColumns), (float)(idxChar / this->textureColumns) };
+        printf("set Text %d '%c' -> %d t: %f %f p: %f %f\n", idxTextOut, text[idxText], idxChar, texPos.x, texPos.y, pos.x, pos.y);
+        InstancedObject2D::updateInstance(idxTextOut, true, pos, texPos, this->characterSize);
+        ++idxTextOut;
+    }
+    numInstances = idxTextOut;
     for ( int i = numInstances; i < oldNumInstances; ++i )
     {
         InstancedObject2D::updateInstanceType(i, false, Vec2{0,0});
     }
-    Vec2 pos = this->pos;
-    for ( int idxText = 0; idxText < numInstances; ++idxText )
-    {
-        pos.x = idxText / 1.5; // this->characterSize.x;
-        if ( text[idxText] == '\n' || text[idxText] == '\r' )
-        {
-            pos.x = this->pos.x;
-            pos.y += 0.1; //this->characterSize.y;
-        }
-        InstancedObject2D::updateInstanceType(textIndex[text[idxText]], true, Vec2{0,0});
-        int idxChar = textIndex[text[idxText]];
-        Vec2 texPos{(float)(idxChar % this->textureColumns), (float)(idxChar / this->textureColumns) };
-        printf("set Text %d '%c' -> %d t: %f %f p: %f %f\n", idxText, text[idxText], idxChar, texPos.x, texPos.y, pos.x, pos.y);
-        InstancedObject2D::updateInstance(idxText, true, pos, texPos, this->characterSize);
-    }
-    
 }
-void Text2D::setCharacterSize(Vec2 size)
+
+void Text2D::setCharacterSize(Vec2 size, Vec2 displayDistance = {1,1})
 {
     this->characterSize = size;
+    this->characterDisplayDistance = displayDistance;
+}
+
+void Path2D::updateCamera(float view[16], float proj[16])
+{
+    glUseProgram(this->program);
+    glUniformMatrix4fv(glGetUniformLocation(this->program, "view"), 1, GL_FALSE, view);
+    glUniformMatrix4fv(glGetUniformLocation(this->program, "projection"), 1, GL_FALSE, proj);
+    glUseProgram(0);
+}
+
+void Path2D::setPosition(Vec2 pos)
+{
+    Tools::validate(pos);
+    printf("move to %2.2f %2.2f\n", pos.x, pos.y);
+    float idMat[] = {1,0,0,0,
+                    0,1,0,0,
+                    0,0,1,0,
+                    pos.x,pos.y,0,1};
+    glUseProgram(program);
+    glUniformMatrix4fv(glGetUniformLocation(program, "model"), 1, GL_FALSE, idMat);
+    glUseProgram(0);
+}
+
+void Path2D::draw()
+{
+    glUseProgram(this->program);
+
+    glBindVertexArray(this->vao);
+
+    glDrawArrays(GL_LINE_STRIP,0,vertexData.size());
+
+    glBindVertexArray(0);
+
+    glUseProgram(0);
+}
+
+Path2D::Path2D(std::vector<Vec2> elements, float color[3])
+{
+    (void)color;
+    program = createShader(loadText("shaders/dbg_path.vs").c_str(), loadText("shaders/dbg_path.fs").c_str());
+    glGenVertexArrays(1, &vao);
+    glBindVertexArray(vao);
+
+    glGenBuffers(1, &vertexBuffer);
+    for (const Vec2 v : elements)
+    {
+        vertexData.push_back(v.x);
+        vertexData.push_back(v.y);
+    }
+    glBindBuffer(GL_ARRAY_BUFFER, vertexBuffer);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(float)*vertexData.size(), &vertexData[0], GL_STATIC_DRAW);
+
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(float) * 2, 0);
+
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    glBindVertexArray(0);
+
+    float idMat[] = {1, 0, 0, 0,
+                     0, 1, 0, 0,
+                     0, 0, 1, 0,
+                     0, 0, 0, 1};
+    float idMat_01[] = {.125f, 0, 0, 0,
+                        0, .125f, 0, 0,
+                        0, 0, .125f, 0,
+                        0, 0, 0, 1};
+    glUseProgram(program);
+    glUniform1i(glGetUniformLocation(program, "tex"), 0);
+    glUniformMatrix4fv(glGetUniformLocation(program, "model"), 1, GL_FALSE, idMat);
+    glUniformMatrix4fv(glGetUniformLocation(program, "view"), 1, GL_FALSE, idMat_01);
+    glUniformMatrix4fv(glGetUniformLocation(program, "projection"), 1, GL_FALSE, idMat);
+    glUniform3fv(glGetUniformLocation(program, "color"), 1, color);
+    glUseProgram(0);
 }
