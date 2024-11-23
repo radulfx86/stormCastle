@@ -9,7 +9,7 @@ class Controller
     public:
     Controller(EntityID target) : target(target) {}
 
-    bool update(float delta_s)
+    virtual bool update(float delta_s)
     {
         (void) delta_s;
         Bounds *b = EntityManager::getInstance().getComponent<Bounds*>(target);
@@ -53,9 +53,53 @@ class Controller
         actions.push_back(action);
     }
 
-    private:
+    protected:
     const EntityID target;
     std::vector<Action> actions;
+};
+
+class DialogController : public Controller
+{
+public:
+    DialogController(DialogTree *tree, EntityID source, EntityID target)
+    : Controller(source), tree(tree), source(source), target(target) {}
+
+    virtual bool update(float delta_s) override
+    {
+        for (Action &action : actions)
+        {
+            // select menu entry
+            if (action.TYPE == Action::MOTION)
+            {
+                if (action.v2iParam.y > 0)
+                {
+                    tree->selectedOption = (tree->selectedOption + 1) % tree->numOptions;
+                }
+                if (action.v2iParam.y < 0)
+                {
+                    tree->selectedOption = (tree->selectedOption - 1) % tree->numOptions;
+                }
+            }
+            // trigger menu action
+            else if (action.TYPE == Action::INTERACT)
+            {
+                if (tree->options[tree->selectedOption])
+                {
+                    tree = tree->options[tree->selectedOption];
+                }
+                else if (tree->triggers[tree->selectedOption])
+                {
+                    tree->triggers[tree->selectedOption](source, target);
+                }
+            }
+        }
+        actions.clear();
+        return true;
+    }
+
+private:
+    EntityID source, target;
+    DialogTree *tree;
 };
 
 #endif // _CONTROLLER_H_

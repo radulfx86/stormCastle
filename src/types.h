@@ -3,8 +3,10 @@
 #include "gl_headers.h"
 #include <unordered_map>
 #include <vector>
+#include <array>
 #include <map>
 #include <string>
+#include "ecs.h"
 
 
 typedef struct Vec2
@@ -60,11 +62,21 @@ typedef struct TexInfo
     float texOrigin[2];
 } TexInfo;
 
+enum AnimationDirection
+{
+    ANIM_LEFT = 0,
+    ANIM_RIGHT = 1,
+    ANIM_UP = 2,
+    ANIM_DOWN = 3,
+    NUM_ANIM_DIRECTIONS
+};
+
 typedef struct Animation {
-    std::vector<TexInfo> frames;
+    std::array<std::vector<TexInfo>,NUM_ANIM_DIRECTIONS> frames;
     std::vector<float> deltas;
     int currentFrame;
     float currentDelta;
+    AnimationDirection currentDirection;
 } Animation;
 
 class Drawable
@@ -91,6 +103,7 @@ public:
     virtual void draw() override;
     virtual void setPosition(Vec2 pos) override;
     virtual void updateCamera(float view[16], float proj[16]) override;
+    void setAnimation(AnimationDirection animDir);
 };
 
 class InstancedObject2D : public Object2D
@@ -114,6 +127,7 @@ class Text2D : public InstancedObject2D
 public:
     void setText(std::string text);
     void setCharacterSize(Vec2 size, Vec2 displayDistance);
+    void setColor(float color[3]);
     virtual void draw() override { InstancedObject2D::draw(); }
     virtual void updateAnimation(float delta_s) override { InstancedObject2D::updateAnimation(delta_s); }
     Vec2 characterSize;
@@ -134,7 +148,7 @@ public:
     Path2D(std::vector<Vec2> elements, float color[3]);
     
     virtual void draw() override;
-    virtual void setPosition(Vec2 pos);
+    virtual void setPosition(Vec2 pos) override;
     virtual void updateCamera(float view[16], float proj[16]) override;
 };
 typedef struct {
@@ -154,9 +168,11 @@ class Level;
 
 class Controller;
 
+
 typedef struct Scene2D
 {
     bool running;
+    bool paused;
     #ifndef __EMSCRIPTEN__
     SDL_Window *window;
     #endif
@@ -166,6 +182,26 @@ typedef struct Scene2D
     uint64_t tick;
 } Scene2D;
 
+const int NUM_OPTIONS = 4;
+struct DialogTree
+{
+    int selectedOption;
+    std::string text;
+    DialogTree *options[NUM_OPTIONS];
+    int numOptions;
+    TriggerFunction triggers[NUM_OPTIONS];
+};
+
+class Dialog2D : public Drawable
+{
+public:
+    EntityID source;
+    EntityID target;
+    Controller *controller;
+    Text2D *text;
+    Scene2D *scene;
+    DialogTree *tree;
+};
 
 typedef struct Action {
    enum { IDLE = 0, MOTION, INTERACT, ATTACK, TALK, SPECIAL, NUM_ACTIONS} TYPE;

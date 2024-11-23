@@ -237,6 +237,8 @@ public:
         triggerComponents.set(s.getComponentID<TriggerFunction>());
         triggers = s.addSystem(triggerComponents, "triggers");
 
+        animations.init(true);
+
         //exit(3);
     };
     bool update(float delta_s)
@@ -446,14 +448,32 @@ void createObject(Object2D &obj, GLuint program, float tileSize = 1.0, Vec2 spri
     obj.animation.currentFrame = 0;
     obj.animation.deltas = {0.2, 0.2, 0.2, 0.2 };
     float w = 1.0 / 12.0;
-    obj.animation.frames = {
+    obj.animation.currentDirection = AnimationDirection::ANIM_DOWN;
+    obj.animation.frames[ANIM_DOWN] = {
         {{0,0}, {w,1.f}, false,  {0,0}},
         {{1,0}, {w,1.f}, false,  {0,0}},
         {{2,0}, {w,1.f}, false,  {0,0}},
         {{3,0}, {w,1.f}, false,  {0,0}},
     };
+    obj.animation.frames[ANIM_UP] = {
+        {{4,0}, {w,1.f}, false,  {0,0}},
+        {{5,0}, {w,1.f}, false,  {0,0}},
+        {{6,0}, {w,1.f}, false,  {0,0}},
+        {{7,0}, {w,1.f}, false,  {0,0}},
+    };
+    obj.animation.frames[ANIM_LEFT] = {
+        {{8,0}, {w,1.f}, true,  {0,0}},
+        {{9,0}, {w,1.f}, true,  {0,0}},
+        {{10,0}, {w,1.f}, true,  {0,0}},
+        {{11,0}, {w,1.f}, true,  {0,0}},
+    };
+    obj.animation.frames[ANIM_RIGHT] = {
+        {{8,0}, {w,1.f}, false,  {0,0}},
+        {{9,0}, {w,1.f}, false,  {0,0}},
+        {{10,0}, {w,1.f}, false,  {0,0}},
+        {{11,0}, {w,1.f}, false,  {0,0}},
+    };
 }
-
 
 void createInstanceBackground(InstancedObject2D &obj, GLuint program)
 {
@@ -473,8 +493,9 @@ void createInstanceBackground(InstancedObject2D &obj, GLuint program)
         {
             obj.updateInstance(i++, true, Vec2{(float)x,(float)y}, Vec2{(float)x,(float)y}, Vec2{w, h});
             Animation anim;
-            anim.frames.clear();// = {{{0,0}, {w,h}, false, {0,0}}};
+            //anim.frames.clear();// = {{{0,0}, {w,h}, false, {0,0}}};
             anim.currentFrame = 0;
+            anim.currentDirection = ANIM_DOWN;
             //obj.instancePositions[Vec2i{x,y}] = i;
             //obj.animations.push_back(anim);
             if ( i >= 100 )
@@ -562,6 +583,36 @@ EntityID addNPC(GLuint tex, GLuint program)
         printf("NPC triggered target: %d, source: %d\n", target, source);
     };
     s.addComponent<TriggerFunction>(npc, (TriggerFunction) triggerFun);
+   
+    s.addComponent<AnimationUpdater>(npc, [](Object2D *t, MotionParameters_t *p) -> bool {
+        return false;
+        AnimationDirection animDir = ANIM_DOWN;
+        bool update = false;
+        if ( p->speed.x >= .5 )
+        {
+            animDir = ANIM_RIGHT;
+            update = true;
+        }
+        else if (p->speed.x <= -.5 )
+        {
+            animDir = ANIM_LEFT;
+            update = true;
+        }
+        else if ( p->speed.y >= 0.5 )
+        {
+            animDir = ANIM_UP;
+            update = true;
+        }
+        else if ( p->speed.y <= -0.5 )
+        {
+            animDir = ANIM_DOWN;
+            update = true;
+        }
+        if ( update )
+        {
+            t->setAnimation(animDir);
+        }
+        return false; });
 
     return npc;
 }
@@ -588,7 +639,7 @@ EntityID initBackground()
 EntityID addText()
 {
     Text2D *obj = new Text2D;
-    GLuint instancedProgram = createShader(loadText("shaders/simple.instanced.vs").c_str(), loadText("shaders/simple.instanced.fs").c_str());
+    GLuint instancedProgram = createShader(loadText("shaders/simple.instanced.vs").c_str(), loadText("shaders/text.fs").c_str());
 
     createObject(*obj, instancedProgram);
     obj->texOffset = 1;
@@ -625,9 +676,11 @@ EntityID addText()
     bgMotion->speed = {0,0};
     s.addComponent<MotionParameters_t*>(text, bgMotion);
     printf("level tex: %d\n", obj->tex);
+    float yellow[] = {1,1,0,1};
 
 
     obj->setText("1hello World\n1234");
+    obj->setColor(yellow);
 
     return text;
 
@@ -649,7 +702,35 @@ EntityID initPlayer(Object2D *obj)
     interaction->active = false;
     s.addComponent<InteractionParameters_t*>(player, interaction);
 
-    return player;
+    s.addComponent<AnimationUpdater>(player, [](Object2D *t, MotionParameters_t *p) -> bool {
+        AnimationDirection animDir = ANIM_DOWN;
+        bool update = false;
+        if ( p->speed.x >= .5 )
+        {
+            animDir = ANIM_RIGHT;
+            update = true;
+        }
+        else if (p->speed.x <= -.5 )
+        {
+            animDir = ANIM_LEFT;
+            update = true;
+        }
+        else if ( p->speed.y >= 0.5 )
+        {
+            animDir = ANIM_UP;
+            update = true;
+        }
+        else if ( p->speed.y <= -0.5 )
+        {
+            animDir = ANIM_DOWN;
+            update = true;
+        }
+        if ( update )
+        {
+            t->setAnimation(animDir);
+        }
+        return false; });
+        return player;
 }
 
 int main()
@@ -692,13 +773,12 @@ int main()
     #endif
 
     /* NPC */
-    EntityID npc = addNPC(obj->tex, program);
-    printf("npc entity has id %d\n", npc);
+    EntityID npc = addNPC(obj->tex, createShader(loadText("shaders/simple.vs").c_str(), loadText("shaders/simple.fs").c_str()));
+    //printf("npc entity has id %d\n", npc);
 
 
     EntityID text = addText();
     (void) text;
-
 
     scene.currentLevel = new Level(LevelData::load("level.txt", Vec2i{-5,-5}), background);
 

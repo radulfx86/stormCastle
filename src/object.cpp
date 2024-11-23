@@ -23,6 +23,12 @@ void Object2D::draw()
     glUseProgram(0);
 }
 
+void Object2D::setAnimation(AnimationDirection animDir)
+{
+    animation.currentDirection = animDir;
+    printf("setAnimation(%d)\n", animDir);
+}
+
 void Object2D::setPosition(Vec2 pos)
 {
     Tools::validate(pos);
@@ -38,8 +44,9 @@ void Object2D::setPosition(Vec2 pos)
 
 void Object2D::updateAnimation(float delta_s)
 {
+    printf("animation direction: %d for object %p program %d\n", this->animation.currentDirection, this, program);
     bool updated = false;
-    if ( this->animation.frames.size() > 1 )
+    if ( this->animation.frames[this->animation.currentDirection].size() > 1 )
     {
         this->animation.currentDelta += delta_s;
 
@@ -52,21 +59,22 @@ void Object2D::updateAnimation(float delta_s)
     }
     if ( updated )
     {
-        printf("updated to frame %d at %0.2fx%0.2f size %0.2fx%0.2f\n",
+        printf("updated to frame %d dir %d at %0.2fx%0.2f size %0.2fx%0.2f\n",
                this->animation.currentFrame,
-               this->animation.frames[this->animation.currentFrame].texPos[0],
-               this->animation.frames[this->animation.currentFrame].texPos[1],
-               this->animation.frames[this->animation.currentFrame].texSize[0],
-               this->animation.frames[this->animation.currentFrame].texSize[1]);
+               this->animation.currentDirection,
+               this->animation.frames[this->animation.currentDirection][this->animation.currentFrame].texPos[0],
+               this->animation.frames[this->animation.currentDirection][this->animation.currentFrame].texPos[1],
+               this->animation.frames[this->animation.currentDirection][this->animation.currentFrame].texSize[0],
+               this->animation.frames[this->animation.currentDirection][this->animation.currentFrame].texSize[1]);
         glUseProgram(this->program);
         GLuint enabledUniform = glGetUniformLocation(this->program, "texInfo.flip");
-        glUniform1i(enabledUniform, this->animation.frames[this->animation.currentFrame].flip);
+        glUniform1i(enabledUniform, this->animation.frames[this->animation.currentDirection][this->animation.currentFrame].flip);
         GLuint posUniform = glGetUniformLocation(this->program, "texInfo.texOrigin");
-        glUniform2fv(posUniform, 1, this->animation.frames[this->animation.currentFrame].texOrigin);
+        glUniform2fv(posUniform, 1, this->animation.frames[this->animation.currentDirection][this->animation.currentFrame].texOrigin);
         GLuint texPosUniform = glGetUniformLocation(this->program, "texInfo.texPos");
-        glUniform2fv(texPosUniform, 1, this->animation.frames[this->animation.currentFrame].texPos);
+        glUniform2fv(texPosUniform, 1, this->animation.frames[this->animation.currentDirection][this->animation.currentFrame].texPos);
         GLuint texSizeUniform = glGetUniformLocation(this->program, "texInfo.texSize");
-        glUniform2fv(texSizeUniform, 1, this->animation.frames[this->animation.currentFrame].texSize);
+        glUniform2fv(texSizeUniform, 1, this->animation.frames[this->animation.currentDirection][this->animation.currentFrame].texSize);
         glUseProgram(0);
     }
 }
@@ -85,7 +93,7 @@ void InstancedObject2D::updateAnimation(float delta_s)
     for ( Animation &anim : this->animations )
     {
         bool updated = false;
-        if (anim.frames.size() > 1)
+        if (anim.frames[this->animation.currentDirection].size() > 1)
         {
             anim.currentDelta += delta_s;
 
@@ -101,24 +109,24 @@ void InstancedObject2D::updateAnimation(float delta_s)
             printf("updated %d to frame %d at %0.2fx%0.2f size %0.2fx%0.2f\n",
                     idx,
                    anim.currentFrame,
-                   anim.frames[anim.currentFrame].texPos[0],
-                   anim.frames[anim.currentFrame].texPos[1],
-                   anim.frames[anim.currentFrame].texSize[0],
-                   anim.frames[anim.currentFrame].texSize[1]);
+                   anim.frames[this->animation.currentDirection][anim.currentFrame].texPos[0],
+                   anim.frames[this->animation.currentDirection][anim.currentFrame].texPos[1],
+                   anim.frames[this->animation.currentDirection][anim.currentFrame].texSize[0],
+                   anim.frames[this->animation.currentDirection][anim.currentFrame].texSize[1]);
             glUseProgram(this->program);
             char uniformName[50];
             sprintf(uniformName,"texInfo[%i].flip", idx);
             GLuint enabledUniform = glGetUniformLocation(this->program, uniformName);
-            glUniform1i(enabledUniform, anim.frames[anim.currentFrame].flip);
+            glUniform1i(enabledUniform, anim.frames[this->animation.currentDirection][anim.currentFrame].flip);
             sprintf(uniformName,"texInfo[%i].texOrigin", idx);
             GLuint posUniform = glGetUniformLocation(this->program, uniformName);
-            glUniform2fv(posUniform, 1, anim.frames[anim.currentFrame].texOrigin);
+            glUniform2fv(posUniform, 1, anim.frames[this->animation.currentDirection][anim.currentFrame].texOrigin);
             sprintf(uniformName,"texInfo[%i].texPos", idx);
             GLuint texPosUniform = glGetUniformLocation(this->program, uniformName);
-            glUniform2fv(texPosUniform, 1, anim.frames[anim.currentFrame].texPos);
+            glUniform2fv(texPosUniform, 1, anim.frames[this->animation.currentDirection][anim.currentFrame].texPos);
             sprintf(uniformName,"texInfo[%i].texSize", idx);
             GLuint texSizeUniform = glGetUniformLocation(this->program, uniformName);
-            glUniform2fv(texSizeUniform, 1, anim.frames[anim.currentFrame].texSize);
+            glUniform2fv(texSizeUniform, 1, anim.frames[this->animation.currentDirection][anim.currentFrame].texSize);
             glUseProgram(0);
         }
         ++idx;
@@ -217,7 +225,7 @@ void Text2D::setText(std::string text)
     
     Vec2 pos{this->pos.x, this->pos.y};
     int idxTextOut = 0;
-    for ( int idxText = 0; idxText < text.size(); ++idxText )
+    for ( size_t idxText = 0; idxText < text.size(); ++idxText )
     {
         pos.x += this->characterDisplayDistance.x;
         if ( text[idxText] == '\n' || text[idxText] == '\r' )
@@ -244,6 +252,13 @@ void Text2D::setCharacterSize(Vec2 size, Vec2 displayDistance = {1,1})
 {
     this->characterSize = size;
     this->characterDisplayDistance = displayDistance;
+}
+
+void Text2D::setColor(float color[4])
+{
+    glUseProgram(this->program);
+    glUniform4fv(glGetUniformLocation(this->program, "textColor"), 1, color);
+    glUseProgram(0);
 }
 
 void Path2D::updateCamera(float view[16], float proj[16])

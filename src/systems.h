@@ -1,6 +1,7 @@
 #ifndef _SYSTEMS_H_
 #define _SYSTEMS_H_
 #include "ecs.h"
+#include <stdio.h>
 
 typedef bool (*AnimationUpdater)(Object2D *tgt, MotionParameters_t *params);
 
@@ -20,6 +21,7 @@ public:
             AnimationUpdater updater = EntityManager::getInstance().getComponent<AnimationUpdater>(eid);
             MotionParameters_t *params = EntityManager::getInstance().getComponent<MotionParameters_t*>(eid);
             Object2D *tgt = EntityManager::getInstance().getComponent<Object2D*>(eid);
+            printf("updating AnimationsSystem for eid %d object at %p\n", eid, tgt);
             updater(tgt, params);
         }
     }
