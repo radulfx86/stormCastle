@@ -62,23 +62,27 @@ typedef struct TexInfo
     float texOrigin[2];
 } TexInfo;
 
-enum AnimationDirection
+typedef enum
 {
-    ANIM_LEFT = 0,
-    ANIM_RIGHT = 1,
-    ANIM_UP = 2,
-    ANIM_DOWN = 3,
-    NUM_ANIM_DIRECTIONS
-};
+    UP = 0,
+    RIGHT,
+    LEFT,
+    DOWN,
+    NUM_DIRECTIONS
+} Direction_t;
+
+typedef struct {
+    int placeholder;
+    Direction_t dir;
+} CharacterState_t;
 
 typedef struct Animation {
-    std::array<std::vector<TexInfo>,NUM_ANIM_DIRECTIONS> frames;
+    std::array<std::vector<TexInfo>,NUM_DIRECTIONS> frames;
     std::vector<float> deltas;
     int currentFrame;
     float currentDelta;
-    AnimationDirection currentDirection;
+    Direction_t currentDirection;
 } Animation;
-
 
 class Drawable
 {
@@ -105,7 +109,7 @@ public:
     virtual void draw() override;
     virtual void setPosition(Vec2 pos) override;
     virtual void updateCamera(float view[16], float proj[16]) override;
-    void setAnimation(AnimationDirection animDir);
+    void setAnimation(Direction_t animDir);
 };
 
 class InstancedObject2D : public Object2D

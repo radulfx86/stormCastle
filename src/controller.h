@@ -3,6 +3,7 @@
 
 #include "types.h"
 #include "ecs.h"
+#include "tools.h"
 
 class Controller
 {
@@ -14,6 +15,7 @@ class Controller
         (void) delta_s;
         Bounds *b = EntityManager::getInstance().getComponent<Bounds*>(target);
         MotionParameters_t *m = EntityManager::getInstance().getComponent<MotionParameters_t*>(target);
+        CharacterState_t *st = EntityManager::getInstance().getComponent<CharacterState_t*>(target);
         printf("DBG controller for entity %d bounds at %p\n", target, &b);
         for ( Action &action : actions )
         {
@@ -21,6 +23,7 @@ class Controller
             {
                 if ( action.bParam )
                 {
+                    st->dir = Tools::dirFromVector(action.v2iParam);
                     m->speed.x = action.v2iParam.x != 0 ? action.v2iParam.x : m->speed.x;
                     m->speed.y = action.v2iParam.y != 0 ? action.v2iParam.y : m->speed.y;
                 }
@@ -34,7 +37,7 @@ class Controller
             {
                 InteractionParameters_t *i = EntityManager::getInstance().getComponent<InteractionParameters_t*>(target);
                 i->type = InteractionParameters_t::TRIGGER;
-                i->direction = m->speed;
+                i->direction = Tools::dirVector(st->dir);
                 printf("new interaction - direction: %f %f\n", i->direction.x, i->direction.y);
                 i->active = true;
             }

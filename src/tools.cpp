@@ -51,3 +51,40 @@ bool Tools::inBounds(const Bounds * bounds, const Vec2 pos)
         && ((pos.y > bounds->pos.y) && (pos.y < (bounds->pos.y+bounds->size.y)));
     return isInBounds;
 }
+
+Vec2 Tools::dirVector(Direction_t dir)
+{
+    switch(dir)
+    {
+        case UP:
+            return Vec2{0,-1};
+        case DOWN:
+            return Vec2{0,1};
+        case LEFT:
+            return Vec2{-1,0};
+        case RIGHT:
+            return Vec2{1,0};
+        default:
+            return Vec2{0,0};
+    }
+}
+
+Direction_t Tools::dirFromVector(Vec2i vec)
+{
+    if ( vec.x >= 1.0 )
+    {
+        return RIGHT;
+    }
+    if ( vec.x <= -1.0 )
+    {
+        return LEFT;
+    }
+    if ( vec.y >= 1.0 )
+    {
+        return DOWN;
+    }
+    if ( vec.y <= -1.0 )
+    {
+        return UP;
+    }
+}

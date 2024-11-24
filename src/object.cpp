@@ -23,7 +23,7 @@ void Object2D::draw()
     glUseProgram(0);
 }
 
-void Object2D::setAnimation(AnimationDirection animDir)
+void Object2D::setAnimation(Direction_t animDir)
 {
     animation.currentDirection = animDir;
     printf("setAnimation(%d)\n", animDir);
