@@ -54,7 +54,10 @@ public:
                     switch (line[x])
                     {
                         case 'W' :
-                            level.data[Vec2i{x+offset.x,y+offset.y}] = {WALL,0};
+                            level.data[Vec2i{2*x+offset.x,2*y+offset.y}] = {WALL,0};
+                            level.data[Vec2i{2*x+offset.x+1,2*y+offset.y}] = {WALL,0};
+                            level.data[Vec2i{2*x+offset.x+1,2*y+offset.y+1}] = {WALL,0};
+                            level.data[Vec2i{2*x+offset.x,2*y+offset.y+1}] = {WALL,0};
                             break;
                         case 'D' :
                             level.data[Vec2i{x+offset.x,y+offset.y}] = {DOOR,0};

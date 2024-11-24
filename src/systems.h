@@ -33,6 +33,7 @@ private:
     constexpr static Mat4 identity{1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1};
     Mat4 view;
     Mat4 proj;
+    Vec2 pos;
 
 public:
     Camera() : System(EntityManager::getInstance().newSystem("camera"))
@@ -43,6 +44,7 @@ public:
     }
     void move(Vec2 pos)
     {
+        this->pos = pos;
         printf("Camera: move to %f %f\n", pos.x, pos.y);
         view[12] = -pos.x;
         view[13] = -pos.y;
@@ -52,6 +54,14 @@ public:
         proj[0] = level;
         proj[5] = level;
         proj[11] = level;
+    }
+
+    Bounds getViewCone()
+    {
+        Bounds viewBounds;
+        viewBounds.size = Vec2{15,15};
+        viewBounds.pos = Vec2{pos.x - viewBounds.size.x/2, pos.y - viewBounds.size.y/2};
+        return viewBounds;
     }
 
     virtual void update(float deltaTimeS) override
