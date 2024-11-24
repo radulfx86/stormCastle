@@ -38,6 +38,14 @@ class Controller
                 printf("new interaction - direction: %f %f\n", i->direction.x, i->direction.y);
                 i->active = true;
             }
+            else if ( action.TYPE == Action::SPECIAL )
+            {
+                InteractionParameters_t *i = EntityManager::getInstance().getComponent<InteractionParameters_t*>(target);
+                i->type = InteractionParameters_t::RANGED;
+                i->direction.x = action.v2iParam.x;
+                i->direction.y = action.v2iParam.y;
+                i->active = true;
+            }
         }
         actions.clear();
         return true;
@@ -92,6 +100,7 @@ public:
                     tree->triggers[tree->selectedOption](source, target);
                 }
             }
+
         }
         actions.clear();
         return true;

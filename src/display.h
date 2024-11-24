@@ -154,6 +154,12 @@ void handleInput(Scene2D &scene)
                 break;
             }
         }
+        else if ( event.type == SDL_MOUSEBUTTONDOWN )
+        {
+            Vec2i mousePos;
+            SDL_GetMouseState( &mousePos.x, &mousePos.y);
+            scene.controller->addAction(Action{Action::SPECIAL, mousePos, {0}, true});
+        }
     }
 }
 void startMainLoop(Scene2D &scene)

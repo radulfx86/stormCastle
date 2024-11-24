@@ -32,6 +32,7 @@ void Object2D::setAnimation(AnimationDirection animDir)
 void Object2D::setPosition(Vec2 pos)
 {
     Tools::validate(pos);
+    this->pos = pos;
     printf("move to %2.2f %2.2f\n", pos.x, pos.y);
     float idMat[] = {1,0,0,0,
                     0,1,0,0,
@@ -79,7 +80,7 @@ void Object2D::updateAnimation(float delta_s)
     }
 }
 
-void Object2D::updateCamera(float view[16], float proj[16])
+void Object2D::updateCamera(Mat4 view, Mat4 proj)
 {
     glUseProgram(this->program);
     glUniformMatrix4fv(glGetUniformLocation(this->program, "view"), 1, GL_FALSE, view);

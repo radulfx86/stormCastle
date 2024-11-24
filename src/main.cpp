@@ -19,10 +19,131 @@ EntityManager &s = EntityManager::getInstance();
 /*** ECS STUFF HERE */
 
 
+#include <sstream>
 
 #include <iostream>
 #include <set>
 #include <queue>
+
+void printObjectInfo(Object2D &obj)
+{
+    printf("Object2D(vao: %d vertexBuffer: %d, program: %d)\n",
+    obj.vao, obj.vertexBuffer, obj.program);
+}
+
+
+
+void createObject(Object2D &obj, GLuint program, float tileSize = 1.0, Vec2 spriteSize = {1,1}, Vec2i spritePos = {0,0})
+{
+    obj.program = program;
+    glGenVertexArrays(1, &obj.vao);
+    glBindVertexArray(obj.vao);
+
+    glGenBuffers(1, &obj.vertexBuffer);
+    float vertexData[] = {
+        -tileSize/2.0f, tileSize/2.0f, spriteSize.x * spritePos.x, spriteSize.y * spritePos.y,
+        -tileSize/2.0f, -tileSize/2.0f, spriteSize.x * spritePos.x, spriteSize.y * (1 + spritePos.y),
+        tileSize/2.0f, tileSize/2.0f, spriteSize.x * (1 + spritePos.x), spriteSize.y * spritePos.y,
+        tileSize/2.0f, -tileSize/2.0f, spriteSize.x * (1 + spritePos.x), spriteSize.y * (1 + spritePos.y)
+       };
+    glBindBuffer(GL_ARRAY_BUFFER, obj.vertexBuffer);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(vertexData), vertexData, GL_STATIC_DRAW);
+
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(float)*4, 0);
+    
+    glEnableVertexAttribArray(1);
+    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(float)*4, (GLvoid*)(2*sizeof(float)));
+
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    glBindVertexArray(0);
+    printf("created object: ");
+    printObjectInfo(obj);
+
+    obj.texOffset = 0;
+
+    float idMat[] = {1,0,0,0,
+                    0,1,0,0,
+                    0,0,1,0,
+                    0,0,0,1};
+    float idMat_01[] = {.125f,0,0,0,
+                    0,.125f,0,0,
+                    0,0,.125f,0,
+                    0,0,0,1};
+    glUseProgram(obj.program);
+    glUniform1i(glGetUniformLocation(obj.program, "tex"), 0);
+    glUniformMatrix4fv(glGetUniformLocation(obj.program, "model"), 1, GL_FALSE, idMat);
+    glUniformMatrix4fv(glGetUniformLocation(obj.program, "view"), 1,  GL_FALSE,idMat_01);
+    glUniformMatrix4fv(glGetUniformLocation(obj.program, "projection"), 1,  GL_FALSE,idMat);
+    glUseProgram(0);
+
+    obj.animation.currentDelta = 0.0;
+    obj.animation.currentFrame = 0;
+    obj.animation.deltas = {0.2, 0.2, 0.2, 0.2 };
+    float w = 1.0 / 12.0;
+    obj.animation.currentDirection = AnimationDirection::ANIM_DOWN;
+    obj.animation.frames[ANIM_DOWN] = {
+        {{0,0}, {w,1.f}, false,  {0,0}},
+        {{1,0}, {w,1.f}, false,  {0,0}},
+        {{2,0}, {w,1.f}, false,  {0,0}},
+        {{3,0}, {w,1.f}, false,  {0,0}},
+    };
+    obj.animation.frames[ANIM_UP] = {
+        {{4,0}, {w,1.f}, false,  {0,0}},
+        {{5,0}, {w,1.f}, false,  {0,0}},
+        {{6,0}, {w,1.f}, false,  {0,0}},
+        {{7,0}, {w,1.f}, false,  {0,0}},
+    };
+    obj.animation.frames[ANIM_LEFT] = {
+        {{8,0}, {w,1.f}, true,  {0,0}},
+        {{9,0}, {w,1.f}, true,  {0,0}},
+        {{10,0}, {w,1.f}, true,  {0,0}},
+        {{11,0}, {w,1.f}, true,  {0,0}},
+    };
+    obj.animation.frames[ANIM_RIGHT] = {
+        {{8,0}, {w,1.f}, false,  {0,0}},
+        {{9,0}, {w,1.f}, false,  {0,0}},
+        {{10,0}, {w,1.f}, false,  {0,0}},
+        {{11,0}, {w,1.f}, false,  {0,0}},
+    };
+}
+Text2D *getText(Vec2 pos, std::string content, float color[3])
+{
+    Text2D *obj = new Text2D;
+    GLuint instancedProgram = createShader(loadText("shaders/simple.instanced.vs").c_str(), loadText("shaders/text.fs").c_str());
+
+    createObject(*obj, instancedProgram);
+    obj->texOffset = 1;
+    glUseProgram(obj->program);
+    glUniform1i(glGetUniformLocation(obj->program, "tex"), 0);
+    glUseProgram(0);
+    obj->size = Vec2{1,1};
+    obj->pos = pos;
+    obj->setCharacterSize(Vec2{1.0/36.0, 0.5}, Vec2{0.8,1});
+    obj->numInstances = 0;
+    int c = 0;
+    for ( char i = 'a'; i <= 'z'; ++i, ++c )
+    {
+        obj->setTextIndex(i, c);
+    }
+    for ( char i = '0'; i <= '9'; ++i, ++c )
+    {
+        obj->setTextIndex(i, c);
+    }
+    for ( char i = 'A'; i <= 'Z'; ++i, ++c )
+    {
+        obj->setTextIndex(i, c);
+    }
+    obj->setTextIndex(' ', c);
+    obj->textureColumns = 36;
+
+    obj->tex = loadTexture("assets/images/font4_8.png",0);
+
+    obj->setText(content);
+    obj->setColor(color);
+
+    return obj;
+}
 
 class LevelData
 {
@@ -137,11 +258,6 @@ public:
         std::vector<std::pair<Vec2i, LevelTile>> tiles;
         Vec2i min = {(int)b.pos.x, (int)b.pos.y};
         Vec2i max = {(int)std::ceil(b.pos.x + b.size.x), (int)(std::ceil(b.pos.y + b.size.y))};
-        for ( auto tile : data )
-        {
-            tiles.push_back(tile);
-        }
-        return tiles;
         for ( int x = min.x; x < max.x ; ++x )
         {
             for ( int y = min.y; y < max.y; ++y )
@@ -215,7 +331,7 @@ private:
 class Level
 {
 public:
-    Level(LevelData data, EntityID background) : data(data), background(background), numTiles(100)
+    Level(LevelData data, EntityID background, EntityID player) : data(data), background(background), player(player), numTiles(100)
     {
         //animations.init();
         Components drawingComponents;
@@ -239,12 +355,26 @@ public:
 
         animations.init(true);
 
+
+        pointer = s.newEntity("pointer");
+        float purple[3]{1,0,1};
+        s.addComponent<Text2D*>(pointer, getText({0,0},"",purple));
+
+
+        camera.init(true);
+
         //exit(3);
     };
     bool update(float delta_s)
     {
 
         s.updateSystem(actionHandling);
+
+        /* camera */
+        Bounds *playerBounds = (Bounds*)s.getComponent<Bounds*>(player);
+        camera.move(playerBounds->pos);
+        camera.update(delta_s);
+
         /* level background */
         /* TODO:
         - get view-cone (optional)
@@ -252,7 +382,8 @@ public:
             - set background-tile-instance - pos & type (texture offset)
         */
         InstancedObject2D *bgObj = (InstancedObject2D*)s.getComponent<Object2D*>(background);
-        Bounds cameraBounds{Vec2{-5,-5}, Vec2{10,10}};
+        /// TODO get bounds from actual cam
+        Bounds cameraBounds{Vec2{playerBounds->pos.x-2, playerBounds->pos.y-2}, Vec2{5,5}};
         std::vector<std::pair<Vec2i, LevelData::LevelTile>> tiles = data.getTilesInBounds(cameraBounds);
 
         int idxTile = 0;
@@ -279,19 +410,30 @@ public:
             InteractionParameters_t *interaction = s.getComponent<InteractionParameters_t*>(entity);
             if ( interaction->active )
             {
-                printf("interaction for entity %d of type %d dir(%f %f)\n", entity, interaction->type, interaction->direction.x, interaction->direction.y);
-                Bounds *sourceBounds = s.getComponent<Bounds*>(entity);
-                Bounds triggerBounds = *sourceBounds;
-                triggerBounds.pos = triggerBounds.pos + interaction->direction;
-                for ( auto triggerEntity : s.getSystemEntities(triggers) )
+                if (interaction->type == InteractionParameters_t::RANGED)
                 {
-                    if ( entity != triggerEntity )
+                   Text2D* pointerText = s.getComponent<Text2D*>(pointer);
+                   pointerText->setPosition(interaction->direction); 
+                   std::stringstream sstr;
+                   sstr << "pos " << interaction->direction.x << " " << interaction->direction.y;
+                   pointerText->setText(sstr.str());
+                }
+                else
+                {
+                    printf("interaction for entity %d of type %d dir(%f %f)\n", entity, interaction->type, interaction->direction.x, interaction->direction.y);
+                    Bounds *sourceBounds = s.getComponent<Bounds *>(entity);
+                    Bounds triggerBounds = *sourceBounds;
+                    triggerBounds.pos = triggerBounds.pos + interaction->direction;
+                    for (auto triggerEntity : s.getSystemEntities(triggers))
                     {
-                        Bounds *targetBounds = s.getComponent<Bounds*>(triggerEntity);
-                        if ( Tools::doesIntersect(&triggerBounds, targetBounds) )
+                        if (entity != triggerEntity)
                         {
-                            TriggerFunction triggerFunction = s.getComponent<TriggerFunction>(triggerEntity);
-                            (triggerFunction)(triggerEntity, entity);
+                            Bounds *targetBounds = s.getComponent<Bounds *>(triggerEntity);
+                            if (Tools::doesIntersect(&triggerBounds, targetBounds))
+                            {
+                                TriggerFunction triggerFunction = s.getComponent<TriggerFunction>(triggerEntity);
+                                (triggerFunction)(triggerEntity, entity);
+                            }
                         }
                     }
                 }
@@ -340,6 +482,7 @@ public:
 
         /* animations */
         animations.update(delta_s);
+
         return true;
     }
     bool draw(float delta_s)
@@ -389,91 +532,12 @@ private:
     LevelData data;
     EntityID background;
     int numTiles;
+    EntityID pointer;
+    Camera camera;
+    EntityID player;
 };
 
 /**** NO MORE ECS STUFF HERE */
-void printObjectInfo(Object2D &obj)
-{
-    printf("Object2D(vao: %d vertexBuffer: %d, program: %d)\n",
-    obj.vao, obj.vertexBuffer, obj.program);
-}
-
-
-
-void createObject(Object2D &obj, GLuint program, float tileSize = 1.0, Vec2 spriteSize = {1,1}, Vec2i spritePos = {0,0})
-{
-    obj.program = program;
-    glGenVertexArrays(1, &obj.vao);
-    glBindVertexArray(obj.vao);
-
-    glGenBuffers(1, &obj.vertexBuffer);
-    float vertexData[] = {
-        -tileSize/2.0f, tileSize/2.0f, spriteSize.x * spritePos.x, spriteSize.y * spritePos.y,
-        -tileSize/2.0f, -tileSize/2.0f, spriteSize.x * spritePos.x, spriteSize.y * (1 + spritePos.y),
-        tileSize/2.0f, tileSize/2.0f, spriteSize.x * (1 + spritePos.x), spriteSize.y * spritePos.y,
-        tileSize/2.0f, -tileSize/2.0f, spriteSize.x * (1 + spritePos.x), spriteSize.y * (1 + spritePos.y)
-       };
-    glBindBuffer(GL_ARRAY_BUFFER, obj.vertexBuffer);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(vertexData), vertexData, GL_STATIC_DRAW);
-
-    glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(float)*4, 0);
-    
-    glEnableVertexAttribArray(1);
-    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(float)*4, (GLvoid*)(2*sizeof(float)));
-
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
-    glBindVertexArray(0);
-    printf("created object: ");
-    printObjectInfo(obj);
-
-    obj.texOffset = 0;
-
-    float idMat[] = {1,0,0,0,
-                    0,1,0,0,
-                    0,0,1,0,
-                    0,0,0,1};
-    float idMat_01[] = {.125f,0,0,0,
-                    0,.125f,0,0,
-                    0,0,.125f,0,
-                    0,0,0,1};
-    glUseProgram(obj.program);
-    glUniform1i(glGetUniformLocation(obj.program, "tex"), 0);
-    glUniformMatrix4fv(glGetUniformLocation(obj.program, "model"), 1, GL_FALSE, idMat);
-    glUniformMatrix4fv(glGetUniformLocation(obj.program, "view"), 1,  GL_FALSE,idMat_01);
-    glUniformMatrix4fv(glGetUniformLocation(obj.program, "projection"), 1,  GL_FALSE,idMat);
-    glUseProgram(0);
-
-    obj.animation.currentDelta = 0.0;
-    obj.animation.currentFrame = 0;
-    obj.animation.deltas = {0.2, 0.2, 0.2, 0.2 };
-    float w = 1.0 / 12.0;
-    obj.animation.currentDirection = AnimationDirection::ANIM_DOWN;
-    obj.animation.frames[ANIM_DOWN] = {
-        {{0,0}, {w,1.f}, false,  {0,0}},
-        {{1,0}, {w,1.f}, false,  {0,0}},
-        {{2,0}, {w,1.f}, false,  {0,0}},
-        {{3,0}, {w,1.f}, false,  {0,0}},
-    };
-    obj.animation.frames[ANIM_UP] = {
-        {{4,0}, {w,1.f}, false,  {0,0}},
-        {{5,0}, {w,1.f}, false,  {0,0}},
-        {{6,0}, {w,1.f}, false,  {0,0}},
-        {{7,0}, {w,1.f}, false,  {0,0}},
-    };
-    obj.animation.frames[ANIM_LEFT] = {
-        {{8,0}, {w,1.f}, true,  {0,0}},
-        {{9,0}, {w,1.f}, true,  {0,0}},
-        {{10,0}, {w,1.f}, true,  {0,0}},
-        {{11,0}, {w,1.f}, true,  {0,0}},
-    };
-    obj.animation.frames[ANIM_RIGHT] = {
-        {{8,0}, {w,1.f}, false,  {0,0}},
-        {{9,0}, {w,1.f}, false,  {0,0}},
-        {{10,0}, {w,1.f}, false,  {0,0}},
-        {{11,0}, {w,1.f}, false,  {0,0}},
-    };
-}
 
 void createInstanceBackground(InstancedObject2D &obj, GLuint program)
 {
@@ -560,6 +624,7 @@ void move(const Vec2i &dir)
     exit(3);
 }
 
+
 EntityID addNPC(GLuint tex, GLuint program)
 {
     EntityID npc = s.newEntity("npc");
@@ -581,6 +646,15 @@ EntityID addNPC(GLuint tex, GLuint program)
 
     auto triggerFun = [](int target, int source) -> void {
         printf("NPC triggered target: %d, source: %d\n", target, source);
+        //Dialog2D *diag = new Dialog2D;
+        Text2D *text = s.getComponent<Text2D*>(source);
+        Object2D *obj = s.getComponent<Object2D*>(source);
+        if ( text == 0 )
+        {
+            float blue[3]{0,0,1};
+            text = getText(obj->pos,"blubb", blue);
+        }
+        text->setText("blobb");
     };
     s.addComponent<TriggerFunction>(npc, (TriggerFunction) triggerFun);
    
@@ -636,37 +710,13 @@ EntityID initBackground()
 
     return background;
 }
-EntityID addText()
+
+
+EntityID addText(Vec2 pos, std::string content)
 {
-    Text2D *obj = new Text2D;
-    GLuint instancedProgram = createShader(loadText("shaders/simple.instanced.vs").c_str(), loadText("shaders/text.fs").c_str());
-
-    createObject(*obj, instancedProgram);
-    obj->texOffset = 1;
-    glUseProgram(obj->program);
-    glUniform1i(glGetUniformLocation(obj->program, "tex"), 0);
-    glUseProgram(0);
-    obj->size = Vec2{1,1};
-    obj->pos = Vec2{-2,0};
-    obj->setCharacterSize(Vec2{1.0/36.0, 0.5}, Vec2{0.8,1});
-    obj->numInstances = 0;
-    int c = 0;
-    for ( char i = 'a'; i <= 'z'; ++i, ++c )
-    {
-        obj->setTextIndex(i, c);
-    }
-    for ( char i = '0'; i <= '9'; ++i, ++c )
-    {
-        obj->setTextIndex(i, c);
-    }
-    for ( char i = 'A'; i <= 'Z'; ++i, ++c )
-    {
-        obj->setTextIndex(i, c);
-    }
-    obj->setTextIndex(' ', c);
-    obj->textureColumns = 36;
-
-    obj->tex = loadTexture("assets/images/font4_8.png",0);
+    float red[3]{1,0,1};
+    Text2D *obj = getText(pos, content, red);
+   
     EntityID text = s.newEntity("text");
     s.addComponent<Object2D*>(text,obj);
     Bounds *bgbounds = new Bounds;
@@ -676,11 +726,6 @@ EntityID addText()
     bgMotion->speed = {0,0};
     s.addComponent<MotionParameters_t*>(text, bgMotion);
     printf("level tex: %d\n", obj->tex);
-    float yellow[] = {1,1,0,1};
-
-
-    obj->setText("1hello World\n1234");
-    obj->setColor(yellow);
 
     return text;
 
@@ -777,10 +822,10 @@ int main()
     //printf("npc entity has id %d\n", npc);
 
 
-    EntityID text = addText();
+    EntityID text = addText(Vec2{0,2},"hello World");
     (void) text;
 
-    scene.currentLevel = new Level(LevelData::load("level.txt", Vec2i{-5,-5}), background);
+    scene.currentLevel = new Level(LevelData::load("level.txt", Vec2i{-5,-5}), background, player);
 
     s.showAll();
 

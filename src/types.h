@@ -79,6 +79,7 @@ typedef struct Animation {
     AnimationDirection currentDirection;
 } Animation;
 
+
 class Drawable
 {
 public:
@@ -86,7 +87,7 @@ public:
     //virtual ~Drawable() = default;
     virtual void draw() = 0;
     virtual void setPosition(Vec2 pos) = 0;
-    virtual void updateCamera(float view[16], float proj[16]) = 0;
+    virtual void updateCamera(Mat4 view, Mat4 proj) = 0;
 };
 
 class Object2D : public Drawable
@@ -99,6 +100,7 @@ public:
     GLuint program;
     GLuint texOffset;
     Animation animation;
+    Vec2 pos;
     virtual void updateAnimation(float delta_s);
     virtual void draw() override;
     virtual void setPosition(Vec2 pos) override;
