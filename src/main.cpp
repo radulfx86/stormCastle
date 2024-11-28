@@ -54,6 +54,11 @@ public:
         triggerComponents.set(s.getComponentID<TriggerFunction>());
         triggers = s.addSystem(triggerComponents, "triggers");
 
+        Components dialogComponents;
+        dialogComponents.set(s.getComponentID<Bounds *>());
+        dialogComponents.set(s.getComponentID<Dialog2D *>());
+        dialogSystem = s.addSystem(dialogComponents, "dialogs");
+
         animations.init(true);
 
 
@@ -68,6 +73,7 @@ public:
     };
     bool update(float delta_s)
     {
+        s.updateSystem(dialogSystem);
 
         s.updateSystem(actionHandling);
 
@@ -90,7 +96,7 @@ public:
         for ( auto tile : tiles )
         {
             Vec2 texSize{(float)fmod(tile.second.orientation, 4.0),
-                        (float)(int)(tile.second.orientation / 4.0)};
+                        tile.second.type * 4.0 + (float)(int)(tile.second.orientation / 4.0)};
             bgObj->updateInstanceTypePos(idxTile++, true,
                     Vec2{(float)tile.first.x, (float)tile.first.y},
                     texSize);
@@ -190,14 +196,27 @@ public:
     }
     bool draw(float delta_s)
     {
+        /*
         std::vector<Vec2> path = data.getPathTo(Vec2i{-3,-3}, Vec2i{3,3});
         for ( const Vec2 &el : path )
         {
             printf("path element %f %f\n", el.x, el.y);
         }
+        Path2D *p2d = 0;
+        if ((Path2D*)s.getComponent<Object2D*>(dbg) )
+        {
+            p2d = (Path2D*)s.getComponent<Object2D*>(dbg);
+        }
+        else
+        {
+            p2d = new Path2D;
+            s.addComponent<Object2D*>(dbg, p2d);
+        }
+        p2d->setPath(path);
         float yellow[] = {1,1,0};
-        Path2D p(path,yellow);
-        p.draw();
+        p2d->setColor(yellow);
+        p2d->draw();
+        */
         int c = 0;
         for (auto entity : s.getSystemEntities(drawingSystem))
         {
@@ -221,6 +240,14 @@ public:
             }
             ++c;
         }
+        /* UI */
+        /* dialog */
+        for ( auto entity : s.getSystemEntities(dialogSystem) )
+        {
+            Bounds *bounds = s.getComponent<Bounds *>(entity);
+            Dialog2D *dialog = s.getComponent<Dialog2D *>(entity);
+            dialog->draw();
+        }
         //std::cerr << "elements drawn: " << c << "\n";
         printf("elements drawn: %d\n", c);
         return true;
@@ -238,6 +265,8 @@ private:
     EntityID pointer;
     Camera camera;
     EntityID player;
+    EntityID dbg;
+    SystemID dialogSystem;
 };
 
 /**** NO MORE ECS STUFF HERE */

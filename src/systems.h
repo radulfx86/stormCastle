@@ -49,6 +49,7 @@ public:
         view[12] = -pos.x;
         view[13] = -pos.y;
     }
+
     void zoom(float level)
     {
         proj[0] = level;

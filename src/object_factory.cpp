@@ -69,6 +69,14 @@ EntityID ObjectFactory::addNPC(GLuint tex, GLuint program)
             text = getText(obj->pos,"blubb", blue);
         }
         text->setText("blobb");
+        Dialog2D *dialog = nullptr;
+        if ( not s.hasComponent<Dialog2D*>(target) )
+        {
+            dialog = new Dialog2D;
+            s.addComponent<Dialog2D*>(target,dialog);
+        }
+        dialog->active = true;
+
     };
     s.addComponent<TriggerFunction>(npc, (TriggerFunction) triggerFun);
     printf("NPC trigger function at %p\n", s.getComponent<TriggerFunction>(npc));
@@ -152,7 +160,7 @@ EntityID ObjectFactory::initPlayer(Object2D *obj)
     s.addComponent<Object2D*>(player, obj);
     Bounds *bounds = new Bounds;
     bounds->pos = Vec2{1,1};
-    bounds->size = Vec2{1,1};
+    bounds->size = Vec2{0.8,.4};
     s.addComponent<Bounds*>(player, bounds);
     MotionParameters_t *motion = new MotionParameters_t;
     motion->speed = {0,0};
@@ -328,7 +336,7 @@ void ObjectFactory::createInstanceBackground(InstancedObject2D &obj, GLuint prog
     obj.pos = Vec2{0,0};
     int i = 0;
     float w = 0.25;
-    float h = 0.25;
+    float h = 0.125;
     for ( int x = -5; x < 5; ++x )
     {
         for ( int y = -7; y < 7; ++y )

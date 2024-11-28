@@ -3,6 +3,7 @@
 /// TODO move into factories
 #include "io.h"
 #include "shaders.h"
+#include "object_factory.h"
 
 void Object2D::draw()
 {
@@ -243,7 +244,7 @@ void Text2D::setText(std::string text)
         ++idxTextOut;
     }
     numInstances = idxTextOut;
-    for ( int i = numInstances; i < oldNumInstances; ++i )
+    for ( int i = numInstances; i < oldNumInstances && i < 255; ++i )
     {
         InstancedObject2D::updateInstanceType(i, false, Vec2{0,0});
     }
@@ -333,4 +334,59 @@ Path2D::Path2D(std::vector<Vec2> elements, float color[3])
     glUniformMatrix4fv(glGetUniformLocation(program, "projection"), 1, GL_FALSE, idMat);
     glUniform3fv(glGetUniformLocation(program, "color"), 1, color);
     glUseProgram(0);
+}
+
+void Path2D::setPath(std::vector<Vec2> elements)
+{
+    for (const Vec2 v : elements)
+    {
+        vertexData.push_back(v.x);
+        vertexData.push_back(v.y);
+    }
+    glBindVertexArray(vao);
+
+    for (const Vec2 v : elements)
+    {
+        vertexData.push_back(v.x);
+        vertexData.push_back(v.y);
+    }
+    glBindBuffer(GL_ARRAY_BUFFER, vertexBuffer);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(float)*vertexData.size(), &vertexData[0], GL_STATIC_DRAW);
+
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(float) * 2, 0);
+
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    glBindVertexArray(0);
+}
+
+void Path2D::setColor(float color[3])
+{
+    glUseProgram(program);
+    glUniform3fv(glGetUniformLocation(program, "color"), 1, color);
+    glUseProgram(0);
+}
+
+Dialog2D::Dialog2D()
+{
+    float green[] = {0.1,1.0,0.2};
+    this->text = ObjectFactory::getText(Vec2{0,0},"test",green);
+}
+
+void Dialog2D::draw()
+{
+    // meh
+    this->text->setText("bla");
+    this->text->draw();
+}
+
+void Dialog2D::setPosition(Vec2 pos)
+{
+    (void)pos;
+}
+void Dialog2D::updateCamera(Mat4 view, Mat4 proj)
+{
+    (void)view;
+    (void)proj;
+    //this->text->updateCamera(view, proj);
 }

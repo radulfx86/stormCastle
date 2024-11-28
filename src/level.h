@@ -21,6 +21,7 @@ public:
     {
         LevelTileType type;
         int orientation;
+        bool solid;
     };
     int getTileIndex(Vec2i pos)
     {
@@ -54,13 +55,16 @@ public:
                     switch (line[x])
                     {
                         case 'W' :
-                            level.data[Vec2i{2*x+offset.x,2*y+offset.y}] = {WALL,0};
-                            level.data[Vec2i{2*x+offset.x+1,2*y+offset.y}] = {WALL,0};
-                            level.data[Vec2i{2*x+offset.x+1,2*y+offset.y+1}] = {WALL,0};
-                            level.data[Vec2i{2*x+offset.x,2*y+offset.y+1}] = {WALL,0};
+                            level.data[Vec2i{2*x+offset.x,2*y+offset.y}] = {WALL,0,true};
+                            level.data[Vec2i{2*x+offset.x+1,2*y+offset.y}] = {WALL,0,true};
+                            level.data[Vec2i{2*x+offset.x+1,2*y+offset.y+1}] = {WALL,0,true};
+                            level.data[Vec2i{2*x+offset.x,2*y+offset.y+1}] = {WALL,0,true};
                             break;
                         case 'D' :
-                            level.data[Vec2i{x+offset.x,y+offset.y}] = {DOOR,0};
+                            level.data[Vec2i{2*x+offset.x,2*y+offset.y}] = {DOOR,0,false};
+                            level.data[Vec2i{2*x+offset.x+1,2*y+offset.y}] = {DOOR,0,false};
+                            level.data[Vec2i{2*x+offset.x+1,2*y+offset.y+1}] = {DOOR,0,false};
+                            level.data[Vec2i{2*x+offset.x,2*y+offset.y+1}] = {DOOR,0,false};
                             break;
                         default:
                             break;
@@ -105,6 +109,10 @@ public:
                     && (level.data.find(Vec2i{x + 1, y}) != level.data.end())
                  ? 2 : 0;
             tile.second.orientation = cnt;
+            if ( tile.second.type != WALL )
+            {
+                //tile.second.orientation = 0;
+            }
             printf("LEVEL %2d %2d -> %d\n", x, y, cnt);
         }
         printf("LEVEL size: %ld\n", level.data.size());
@@ -114,10 +122,10 @@ public:
 
     bool intersects(const Bounds &b)
     {
-        return data.find(Vec2i{(int)b.pos.x, (int)b.pos.y}) != data.end()
-                || data.find(Vec2i{(int)(b.pos.x + b.size.x), (int)b.pos.y}) != data.end()
-                || data.find(Vec2i{(int)(b.pos.x + b.size.x), (int)(b.pos.y + b.size.y)}) != data.end()
-                || data.find(Vec2i{(int)b.pos.x, (int)(b.pos.y + b.size.y)}) != data.end();
+        return (data.find(Vec2i{(int)b.pos.x, (int)b.pos.y}) != data.end() && data[Vec2i{(int)b.pos.x, (int)b.pos.y}].solid)
+                || (data.find(Vec2i{(int)(b.pos.x + b.size.x), (int)b.pos.y}) != data.end() && data[Vec2i{(int)(b.pos.x + b.size.x), (int)b.pos.y}].solid)
+                || (data.find(Vec2i{(int)(b.pos.x + b.size.x), (int)(b.pos.y + b.size.y)}) != data.end() && data[Vec2i{(int)(b.pos.x + b.size.x), (int)(b.pos.y + b.size.y)}].solid)
+                || (data.find(Vec2i{(int)b.pos.x, (int)(b.pos.y + b.size.y)}) != data.end() && data[Vec2i{(int)b.pos.x, (int)(b.pos.y + b.size.y)}].solid);
     }
     std::vector<std::pair<Vec2i, LevelTile>> getTilesInBounds(const Bounds &b)
     {

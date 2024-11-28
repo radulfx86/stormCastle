@@ -85,7 +85,7 @@ public:
         static EntityManager singleton;
         return singleton;
     }
-    EntityManager() : nextEntityID(SYSTEM+1), nextComponentID(0), nextSystemID(0) {}
+    EntityManager() : nextEntityID(SYSTEM+1), nextComponentID(1), nextSystemID(1) {}
     EntityID newEntity(std::string name);
     
     const std::string getEntityName(EntityID id)
@@ -131,7 +131,19 @@ public:
     T &getComponent(EntityID id)
     {
         //std::cout << __func__ << "<" << typeid(id).name() << ">(" << id << ") -> ...\n";
-        return std::static_pointer_cast<ComponentList<T>>(entityComponents[ComponentIDMap[ComponentType(typeid(T).name())]])->get(entityComponentIndices[id][ComponentIDMap[ComponentType(typeid(T).name())]]);
+        return std::static_pointer_cast<ComponentList<T>>(
+                entityComponents[
+                    ComponentIDMap[ComponentType(typeid(T).name())]])
+                    ->get(entityComponentIndices[id][ComponentIDMap[ComponentType(typeid(T).name())]]);
+    }
+
+    template <typename T>
+    bool hasComponent(EntityID id)
+    {
+        printf("hasComponent(%d) for component %s componentID %d - result: %d\n",
+        id, ComponentType(typeid(T).name()), ComponentIDMap[ComponentType(typeid(T).name())], entityComponentIndices[id][ComponentIDMap[ComponentType(typeid(T).name())]]
+        );
+        return ComponentIDMap[ComponentType(typeid(T).name())] != 0;
     }
 
     template <typename T>
@@ -141,7 +153,6 @@ public:
         if ( entityComponents.find(cId) == entityComponents.end() )
         {
             entityComponents.insert({cId, std::make_shared<ComponentList<T>>(c)});
-            exit(3);
         }
         uint32_t idx = std::static_pointer_cast<ComponentList<T>>(entityComponents[cId])->add(c);
         entityComponentIndices[id][cId] = idx;

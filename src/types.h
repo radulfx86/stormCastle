@@ -153,6 +153,8 @@ public:
     std::vector<float> vertexData;
     Path2D(std::vector<Vec2> elements, float color[3]);
     
+    void setPath(std::vector<Vec2> elements);
+    void setColor(float color[3]);
     virtual void draw() override;
     virtual void setPosition(Vec2 pos) override;
     virtual void updateCamera(float view[16], float proj[16]) override;
@@ -201,12 +203,17 @@ struct DialogTree
 class Dialog2D : public Drawable
 {
 public:
+    Dialog2D();
     EntityID source;
     EntityID target;
+    bool active;
     Controller *controller;
     Text2D *text;
     Scene2D *scene;
     DialogTree *tree;
+    virtual void draw() override;
+    virtual void setPosition(Vec2 pos) override;
+    virtual void updateCamera(Mat4 view, Mat4 proj) override;
 };
 
 typedef struct Action {

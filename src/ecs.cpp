@@ -87,7 +87,10 @@ void EntityManager::showAll()
     for ( auto component : ComponentIDMap )
     {
         std::cout << "\t" << component.first << " -> " << component.second << "\n";
-        entityComponents[component.second]->print("\t\t\t");
+        if ( component.second )
+        {
+            entityComponents[component.second]->print("\t\t\t");
+        }
     }
     std::cout << "Systems:\n";
     for ( auto system : systemComponnentMap )

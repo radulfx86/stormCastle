@@ -11,7 +11,7 @@ void Tools::validate(Vec2 el)
     {
         raise(SIGABRT);
         printf("Vec2 not valid!!!\n");
-        exit(3);
+        exit(7);
     }
 }
 
