@@ -369,12 +369,17 @@ void Path2D::setColor(float color[3])
 
 Dialog2D::Dialog2D()
 {
-    float green[] = {0.1,1.0,0.2};
+    float green[] = {0.3,1.0,0.2};
     this->text = ObjectFactory::getText(Vec2{0,0},"test",green);
+    this->bg = ObjectFactory::createSimpleBgObject(1.0, Vec2{1,1}, Vec2i{0,0});
+    this->bg->texOffset = 0;
+    this->bg->tex = loadTexture("assets/images/bad_scribble_1.png", 0);
+    
 }
 
 void Dialog2D::draw()
 {
+    this->bg->draw();
     // meh
     this->text->setText("bla");
     this->text->draw();
@@ -382,11 +387,82 @@ void Dialog2D::draw()
 
 void Dialog2D::setPosition(Vec2 pos)
 {
-    (void)pos;
+    this->bg->setPosition(pos);
+    this->text->setPosition(pos);
 }
+
 void Dialog2D::updateCamera(Mat4 view, Mat4 proj)
 {
     (void)view;
     (void)proj;
     //this->text->updateCamera(view, proj);
+    this->text->updateCamera(view, proj);
+    this->bg->updateCamera(view,proj);
 }
+
+#if 0
+
+TexObject2D::TexObject2D()
+{
+    obj.program = program;
+    glGenVertexArrays(1, &obj.vao);
+    glBindVertexArray(obj.vao);
+
+    glGenBuffers(1, &obj.vertexBuffer);
+    float vertexData[] = {
+        -tileSize/2.0f, tileSize/2.0f, spriteSize.x * spritePos.x, spriteSize.y * spritePos.y,
+        -tileSize/2.0f, -tileSize/2.0f, spriteSize.x * spritePos.x, spriteSize.y * (1 + spritePos.y),
+        tileSize/2.0f, tileSize/2.0f, spriteSize.x * (1 + spritePos.x), spriteSize.y * spritePos.y,
+        tileSize/2.0f, -tileSize/2.0f, spriteSize.x * (1 + spritePos.x), spriteSize.y * (1 + spritePos.y)
+       };
+    glBindBuffer(GL_ARRAY_BUFFER, obj.vertexBuffer);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(vertexData), vertexData, GL_STATIC_DRAW);
+
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(float)*4, 0);
+    
+    glEnableVertexAttribArray(1);
+    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(float)*4, (GLvoid*)(2*sizeof(float)));
+
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    glBindVertexArray(0);
+    printf("created object: ");
+    printObjectInfo(obj);
+
+    obj.texOffset = 0;
+
+    float idMat[] = {1,0,0,0,
+                    0,1,0,0,
+                    0,0,1,0,
+                    0,0,0,1};
+    float idMat_01[] = {.125f,0,0,0,
+                    0,.125f,0,0,
+                    0,0,.125f,0,
+                    0,0,0,1};
+    glUseProgram(obj.program);
+    glUniform1i(glGetUniformLocation(obj.program, "tex"), 0);
+    glUniformMatrix4fv(glGetUniformLocation(obj.program, "model"), 1, GL_FALSE, idMat);
+    glUniformMatrix4fv(glGetUniformLocation(obj.program, "view"), 1,  GL_FALSE,idMat_01);
+    glUniformMatrix4fv(glGetUniformLocation(obj.program, "projection"), 1,  GL_FALSE,idMat);
+    glUseProgram(0);
+
+}
+
+void TexObject2D::draw()
+{
+    // meh
+    this->text->setText("bla");
+    this->text->draw();
+}
+
+void TexObject2D::setPosition(Vec2 pos)
+{
+    (void)pos;
+}
+void TexObject2D::updateCamera(Mat4 view, Mat4 proj)
+{
+    (void)view;
+    (void)proj;
+    //this->text->updateCamera(view, proj);
+}
+#endif

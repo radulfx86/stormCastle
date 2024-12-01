@@ -23,6 +23,8 @@ Text2D *getText(Vec2 pos, std::string content, float color[3]);
 
 void createInstanceBackground(InstancedObject2D &obj, GLuint program);
 
+Object2D *createSimpleBgObject(float tileSize, Vec2 spriteSize, Vec2i spritePos);
+
 } // namespace ObjectFactory
 
 #endif // _OBJECT_FACTORY_H_

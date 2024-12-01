@@ -281,6 +281,63 @@ void ObjectFactory::createObject(Object2D &obj, GLuint program, float tileSize, 
     };
 }
 
+Object2D *ObjectFactory::createSimpleBgObject(float tileSize, Vec2 spriteSize, Vec2i spritePos)
+{
+    Object2D *obj = new Object2D;
+    obj->program = createShader(loadText("shaders/simple.vs").c_str(), loadText("shaders/simple.fs").c_str());
+    glGenVertexArrays(1, &obj->vao);
+    glBindVertexArray(obj->vao);
+
+    glGenBuffers(1, &obj->vertexBuffer);
+    float vertexData[] = {
+        -tileSize/2.0f, tileSize/2.0f, spriteSize.x * spritePos.x, spriteSize.y * spritePos.y,
+        -tileSize/2.0f, -tileSize/2.0f, spriteSize.x * spritePos.x, spriteSize.y * (1 + spritePos.y),
+        tileSize/2.0f, tileSize/2.0f, spriteSize.x * (1 + spritePos.x), spriteSize.y * spritePos.y,
+        tileSize/2.0f, -tileSize/2.0f, spriteSize.x * (1 + spritePos.x), spriteSize.y * (1 + spritePos.y)
+       };
+    glBindBuffer(GL_ARRAY_BUFFER, obj->vertexBuffer);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(vertexData), vertexData, GL_STATIC_DRAW);
+
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(float)*4, 0);
+    
+    glEnableVertexAttribArray(1);
+    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(float)*4, (GLvoid*)(2*sizeof(float)));
+
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    glBindVertexArray(0);
+    printf("created object: ");
+    printObjectInfo(*obj);
+
+    obj->texOffset = 0;
+
+    float idMat[] = {1,0,0,0,
+                    0,1,0,0,
+                    0,0,1,0,
+                    0,0,0,1};
+    glUseProgram(obj->program);
+    glUniform1i(glGetUniformLocation(obj->program, "tex"), 0);
+    glUniformMatrix4fv(glGetUniformLocation(obj->program, "model"), 1, GL_FALSE, idMat);
+    glUniformMatrix4fv(glGetUniformLocation(obj->program, "view"), 1,  GL_FALSE,idMat);
+    glUniformMatrix4fv(glGetUniformLocation(obj->program, "projection"), 1,  GL_FALSE,idMat);
+    glUseProgram(0);
+    
+    glUseProgram(obj->program);
+
+        GLuint enabledUniform = glGetUniformLocation(obj->program, "texInfo.flip");
+        glUniform1i(enabledUniform, 0);
+        float pos[] = {0,0};
+        float size[] = {1,1};
+        GLuint posUniform = glGetUniformLocation(obj->program, "texInfo.texOrigin");
+        glUniform2fv(posUniform, 1, pos);
+        GLuint texPosUniform = glGetUniformLocation(obj->program, "texInfo.texPos");
+        glUniform2fv(texPosUniform, 1, pos);
+        GLuint texSizeUniform = glGetUniformLocation(obj->program, "texInfo.texSize");
+        glUniform2fv(texSizeUniform, 1, size);
+        glUseProgram(0);
+    return obj;
+}
+
 Text2D *ObjectFactory::getText(Vec2 pos, std::string content, float color[3])
 {
     Text2D *obj = new Text2D;

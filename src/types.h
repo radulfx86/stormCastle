@@ -112,6 +112,17 @@ public:
     void setAnimation(Direction_t animDir);
 };
 
+#if 0
+class TexObject2D : public Drawable
+{
+public:
+    TexObject2D();
+    virtual void draw() override;
+    virtual void setPosition(Vec2 pos) override;
+    virtual void updateCamera(float view[16], float proj[16]) override;
+};
+#endif
+
 class InstancedObject2D : public Object2D
 {
 public:
@@ -208,6 +219,7 @@ public:
     EntityID target;
     bool active;
     Controller *controller;
+    Object2D *bg;
     Text2D *text;
     Scene2D *scene;
     DialogTree *tree;
