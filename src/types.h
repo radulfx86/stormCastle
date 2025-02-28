@@ -229,7 +229,7 @@ public:
 };
 
 typedef struct Action {
-   enum { IDLE = 0, MOTION, INTERACT, ATTACK, TALK, SPECIAL, NUM_ACTIONS} TYPE;
+   enum { IDLE = 0, MOTION, INTERACT, ATTACK, TALK, SPECIAL, NUM_ACTIONS } TYPE;
    Vec2i v2iParam;
    Vec2 v2fParam;
    bool bParam;

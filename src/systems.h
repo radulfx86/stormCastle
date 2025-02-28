@@ -41,6 +41,7 @@ public:
         memcpy(this->view, identity, sizeof(Mat4));
         memcpy(this->proj, identity, sizeof(Mat4));
         zoom(0.125);
+        this->proj[0] *= 0.75;
     }
     void move(Vec2 pos)
     {

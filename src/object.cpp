@@ -367,6 +367,8 @@ void Path2D::setColor(float color[3])
     glUseProgram(0);
 }
 
+#include "controller.h"
+
 Dialog2D::Dialog2D()
 {
     float green[] = {0.3,1.0,0.2};
@@ -374,7 +376,7 @@ Dialog2D::Dialog2D()
     this->bg = ObjectFactory::createSimpleBgObject(1.0, Vec2{1,1}, Vec2i{0,0});
     this->bg->texOffset = 0;
     this->bg->tex = loadTexture("assets/images/bad_scribble_1.png", 0);
-    
+    this->controller = new DialogController(this->tree, this->source, this->target); 
 }
 
 void Dialog2D::draw()
@@ -393,6 +395,7 @@ void Dialog2D::setPosition(Vec2 pos)
 
 void Dialog2D::updateCamera(Mat4 view, Mat4 proj)
 {
+    exit(3);
     (void)view;
     (void)proj;
     //this->text->updateCamera(view, proj);

@@ -77,6 +77,7 @@ public:
 
     virtual bool update(float delta_s) override
     {
+        printf("DialogController updated - has %d actions\n", actions.size());
         for (Action &action : actions)
         {
             // select menu entry
@@ -103,6 +104,10 @@ public:
                     tree->triggers[tree->selectedOption](source, target);
                 }
             }
+            else if (action.TYPE == Action::SPECIAL)
+            {
+                printf("CLOSE DIALOG source: %d target: %d\n", source, target);
+            }
 
         }
         actions.clear();
@@ -110,8 +115,8 @@ public:
     }
 
 private:
-    EntityID source, target;
     DialogTree *tree;
+    EntityID source, target;
 };
 
 #endif // _CONTROLLER_H_

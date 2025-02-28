@@ -12,4 +12,8 @@ void main() {
        // color = vec4(1,0,0,1);
         discard;
     }
+    if ( color.rgb == vec3(0) )
+    {
+        color = vec4(.5,.7,1,1);
+    }
 }

@@ -32,7 +32,7 @@ class Level
 private:
 EntityManager &s = EntityManager::getInstance();
 public:
-    Level(LevelData data, EntityID background, EntityID player) : data(data), background(background), player(player), numTiles(100)
+    Level(LevelData data, EntityID background, EntityID player) : data(data), background(background), player(player), numTiles(100), gameController(0)
     {
         //animations.init();
         Components drawingComponents;
@@ -217,6 +217,7 @@ public:
         p2d->setColor(yellow);
         p2d->draw();
         */
+       Path2D p;
         int c = 0;
         for (auto entity : s.getSystemEntities(drawingSystem))
         {
@@ -242,11 +243,30 @@ public:
         }
         /* UI */
         /* dialog */
+        bool menuActive = false;
         for ( auto entity : s.getSystemEntities(dialogSystem) )
         {
             Bounds *bounds = s.getComponent<Bounds *>(entity);
             Dialog2D *dialog = s.getComponent<Dialog2D *>(entity);
-            dialog->draw();
+            if ( dialog->active )
+            {
+                menuActive = true;
+                scene->controller = dialog->controller;
+                if ( dialog->controller )
+                {
+                    dialog->controller->update(delta_s);
+                }
+                else
+                {
+                    printf("no controller for dialog specified ...\n");
+                    exit(44);
+                }
+                dialog->draw();
+            }
+        }
+        if ( not menuActive )
+        {
+            scene->controller = gameController;
         }
         //std::cerr << "elements drawn: " << c << "\n";
         printf("elements drawn: %d\n", c);
@@ -267,6 +287,7 @@ private:
     EntityID player;
     EntityID dbg;
     SystemID dialogSystem;
+    Controller *gameController;
 };
 
 /**** NO MORE ECS STUFF HERE */
@@ -275,26 +296,26 @@ Scene2D scene;
 
 void mainloop(void *userData)
 {
-    Scene2D *scene = (Scene2D*)userData;
-    glClear(GL_COLOR_BUFFER_BIT);
+Scene2D *scene = (Scene2D*)userData;
+glClear(GL_COLOR_BUFFER_BIT);
 
-    uint64_t now = getNow();
-    if ( scene->last == 0)
-    {
-        scene->last = now;
-    }
-    float delta = (now - scene->last) / 1000.0;
-    scene->controller->update(delta);
-    scene->currentLevel->update(delta);
-    //if ( scene->tick++ %10 == 0)
-    {
-        scene->currentLevel->draw(delta);
-    }
-
-    printf("FPS: %f\n", 1.0/delta);
-
+uint64_t now = getNow();
+if ( scene->last == 0)
+{
     scene->last = now;
-    //printf("tick\n");
+}
+float delta = (now - scene->last) / 1000.0;
+scene->controller->update(delta);
+scene->currentLevel->update(delta);
+//if ( scene->tick++ %10 == 0)
+{
+    scene->currentLevel->draw(delta);
+}
+
+printf("FPS: %f\n", 1.0/delta);
+
+scene->last = now;
+//printf("tick\n");
 }
 
 void move(const Vec2i &dir)

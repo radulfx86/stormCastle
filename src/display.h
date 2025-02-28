@@ -150,6 +150,9 @@ void handleInput(Scene2D &scene)
             case SDLK_SPACE:
                 scene.controller->addAction(Action{Action::INTERACT, {0}, {0}, event.type == SDL_KEYDOWN});
                 break;
+            case SDLK_q:
+                scene.controller->addAction(Action{Action::SPECIAL, {0}, {0}, event.type == SDL_KEYDOWN});
+                break;
             default:
                 break;
             }
